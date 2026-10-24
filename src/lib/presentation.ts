@@ -47,3 +47,31 @@ export function presentStep(
 export function boostedTier(stored: SupportTier, helpRequests: number): SupportTier {
   return Math.min(3, stored + helpRequests) as SupportTier;
 }
+
+// ---------- Review cards ----------
+
+export interface CardPresentation {
+  /** Hint shown as soon as the card appears. */
+  hintShown: boolean;
+  /** A "Show a hint" button is offered. */
+  hintOffered: boolean;
+  /** Errorless: the answer appears with the question. */
+  answerShownWithPrompt: boolean;
+  hint: string;
+}
+
+/** First letter (or digit) of the answer, e.g. "56" -> "5…". */
+export function answerHint(back: string): string {
+  const trimmed = back.trim();
+  return trimmed ? `${trimmed[0]}…` : "";
+}
+
+export function presentCard(back: string, tier: SupportTier): CardPresentation {
+  const hint = answerHint(back);
+  return {
+    hintShown: tier >= 2 && !!hint,
+    hintOffered: tier === 1 && !!hint,
+    answerShownWithPrompt: tier === 3,
+    hint,
+  };
+}

@@ -23,6 +23,7 @@ export default function ParentHome() {
       <View style={{ gap: 12 }}>
         <Button label="Child profiles" variant="secondary" icon="👤" onPress={() => router.push("/parent/children")} />
         <Button label="Study sessions" variant="secondary" icon="📋" onPress={() => router.push("/parent/sessions")} />
+        <Button label="Review cards" variant="secondary" icon="🃏" onPress={() => router.push("/parent/cards")} />
       </View>
 
       <Button label="Back to Child Mode" variant="secondary" onPress={exitParentMode} />

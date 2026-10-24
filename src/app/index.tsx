@@ -38,7 +38,10 @@ export default function ChildHome() {
 
       <View style={{ gap: 20 }}>
         {activeChild && (
-          <Button label="Start studying" icon="📋" big onPress={() => router.push("/sessions")} />
+          <>
+            <Button label="Start studying" icon="📋" big onPress={() => router.push("/sessions")} />
+            <Button label="Practice cards" icon="🃏" big variant="secondary" onPress={() => router.push("/review")} />
+          </>
         )}
       </View>
 

@@ -1,4 +1,4 @@
-import { boostedTier, presentStep } from "../lib/presentation";
+import { boostedTier, presentCard, presentStep } from "../lib/presentation";
 
 const step = { label: "Get your worksheet", hint: "It's in the blue folder", photoUri: "file:///p.jpg" };
 
@@ -47,5 +47,24 @@ describe("boostedTier", () => {
     expect(boostedTier(0, 0)).toBe(0);
     expect(boostedTier(1, 1)).toBe(2);
     expect(boostedTier(2, 5)).toBe(3);
+  });
+});
+
+describe("presentCard", () => {
+  it("tier 0 is pure recall", () => {
+    expect(presentCard("56", 0)).toMatchObject({ hintShown: false, hintOffered: false, answerShownWithPrompt: false });
+  });
+
+  it("tier 1 offers a hint, tier 2 shows it", () => {
+    expect(presentCard("Paris", 1)).toMatchObject({ hintShown: false, hintOffered: true, hint: "P…" });
+    expect(presentCard("Paris", 2)).toMatchObject({ hintShown: true, hintOffered: false });
+  });
+
+  it("tier 3 shows the answer with the prompt (errorless)", () => {
+    expect(presentCard("56", 3).answerShownWithPrompt).toBe(true);
+  });
+
+  it("never offers an empty hint", () => {
+    expect(presentCard("  ", 2)).toMatchObject({ hintShown: false, hintOffered: false });
   });
 });

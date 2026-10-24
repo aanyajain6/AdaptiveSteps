@@ -18,3 +18,14 @@ export const TIER_DESCRIPTIONS: Record<SupportTier, string> = {
 
 /** New steps start with a gentle reminder; the engine adjusts from there. */
 export const DEFAULT_STEP_TIER: SupportTier = 1;
+
+// Review cards use the same tiers with card-specific meaning.
+export const CARD_TIER_LABELS: Record<SupportTier, string> = {
+  0: "Recall on own",
+  1: "Hint if wanted",
+  2: "Hint shown",
+  3: "Answer shown",
+};
+
+/** New cards start with a hint available; the engine adjusts from there. */
+export const DEFAULT_CARD_TIER: SupportTier = 1;
