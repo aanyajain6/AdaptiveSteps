@@ -4,6 +4,19 @@
     "strict": true,
     "types": [
       "jest"
-    ]
-  }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "Claude outputs"
+  ]
 }
