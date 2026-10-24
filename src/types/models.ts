@@ -36,6 +36,8 @@ export interface SessionStep {
   id: string;
   label: string; // e.g. "Read the assignment prompt"
   photoUri?: string;
+  hint?: string; // parent-written reminder, shown from tier 1 up
+  subjectTag?: string;
   supportTier: SupportTier;
 }
 
@@ -50,18 +52,31 @@ export interface StudySession {
 
 export type StepOutcome = "done" | "need_help" | "break";
 
+// Nonverbal responses from the runner's choice board. Logged as
+// communication, never scored -- except "help", which counts the
+// same as tapping Need Help.
+export type ChoiceResponse = "yes" | "no" | "more_time" | "help";
+
+// Self-reported check-in before/after a session. Shown to the parent
+// as context only; the adaptive engine never reads it.
+export type Mood = "happy" | "okay" | "worried" | "upset" | "tired";
+
 export interface SessionAttempt {
   id: string;
   sessionId: string;
   childId: string;
   startedAt: string;
   completedAt?: string;
+  moodBefore?: Mood;
+  moodAfter?: Mood;
   stepLogs: {
     stepId: string;
     outcome: StepOutcome;
     msElapsed: number;
     supportTierAtAttempt: SupportTier;
     timestamp: string;
+    helpRequests?: number; // how many prompts were needed on this step
+    choices?: ChoiceResponse[];
   }[];
 }
 
@@ -99,6 +114,10 @@ export interface ReviewAttempt {
 
 export type AdaptiveItemType = "session_step" | "review_card";
 
+// "superseded" = a pending fade that became moot because the item
+// changed tier for another reason before the parent responded.
+export type AdjustmentStatus = "pending" | "approved" | "declined" | "superseded";
+
 export interface AdaptiveAdjustment {
   id: string;
   childId: string;
@@ -109,5 +128,7 @@ export interface AdaptiveAdjustment {
   reason: string; // plain language, shown to the parent
   requiresParentApproval: boolean; // true when lowering support (fading)
   approved: boolean;
+  status?: AdjustmentStatus; // absent on records written before this field existed
+  resolvedAt?: string;
   createdAt: string;
 }

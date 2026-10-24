@@ -28,6 +28,7 @@ const KEYS = {
   reviewAttempts: "adaptivesteps:reviewAttempts",
   adjustments: "adaptivesteps:adjustments",
   parentPin: "adaptivesteps:parentPin",
+  activeChildId: "adaptivesteps:activeChildId",
 } as const;
 
 async function readAll<T>(key: string): Promise<T[]> {
@@ -51,6 +52,11 @@ export function newId(): string {
 // ---------- Children ----------
 export async function listChildren(): Promise<ChildProfile[]> {
   return readAll<ChildProfile>(KEYS.children);
+}
+
+export async function getChild(childId: string): Promise<ChildProfile | undefined> {
+  const all = await listChildren();
+  return all.find((c) => c.id === childId);
 }
 
 export async function saveChild(child: ChildProfile): Promise<void> {
@@ -155,10 +161,21 @@ export async function saveAdjustment(adj: AdaptiveAdjustment): Promise<void> {
   await writeAll(KEYS.adjustments, all);
 }
 
+/** Insert or replace by id -- used when a parent resolves a pending adjustment. */
+export async function updateAdjustment(adj: AdaptiveAdjustment): Promise<void> {
+  const all = await readAll<AdaptiveAdjustment>(KEYS.adjustments);
+  const idx = all.findIndex((a) => a.id === adj.id);
+  if (idx >= 0) all[idx] = adj;
+  else all.push(adj);
+  await writeAll(KEYS.adjustments, all);
+}
+
 /** Adjustments a parent still needs to approve or decline. */
 export async function listPendingApprovals(childId?: string): Promise<AdaptiveAdjustment[]> {
   const all = await listAdjustments(childId);
-  return all.filter((a) => a.requiresParentApproval && !a.approved);
+  return all.filter(
+    (a) => a.requiresParentApproval && !a.approved && (a.status ?? "pending") === "pending"
+  );
 }
 
 // ---------- Parent PIN (gates Parent Mode; not a real auth system) ----------
@@ -168,6 +185,16 @@ export async function getParentPin(): Promise<string | null> {
 
 export async function setParentPin(pin: string): Promise<void> {
   await AsyncStorage.setItem(KEYS.parentPin, pin);
+}
+
+// ---------- Active child (whose profile Child Mode shows) ----------
+export async function getActiveChildId(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.activeChildId);
+}
+
+export async function setActiveChildId(childId: string | null): Promise<void> {
+  if (childId) await AsyncStorage.setItem(KEYS.activeChildId, childId);
+  else await AsyncStorage.removeItem(KEYS.activeChildId);
 }
 
 // ---------- Dev helper ----------
