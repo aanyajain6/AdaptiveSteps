@@ -3,7 +3,7 @@ import * as db from "../lib/db";
 
 jest.mock("react-native-get-random-values", () => ({}));
 
-beforeEach(() => (AsyncStorage as unknown as { clear: () => Promise<void> }).clear());
+beforeEach(() => AsyncStorage.clear());
 
 describe("deleteChildAndData", () => {
   it("removes the child's records and leaves other children's alone", async () => {

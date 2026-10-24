@@ -44,13 +44,13 @@ async function attempt(outcome: StepOutcome) {
     ],
   };
   await db.saveSessionAttempt(a);
-  return adaptStep(s, STEP, now);
+  return adaptStep(s.id, STEP, now);
 }
 
 const tierNow = async () => (await db.getSession("session-1"))!.steps[0].supportTier;
 
 beforeEach(async () => {
-  await (AsyncStorage as unknown as { clear: () => Promise<void> }).clear();
+  await AsyncStorage.clear();
   clock = 1;
 });
 

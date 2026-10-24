@@ -14,7 +14,6 @@ import {
   ReviewCard,
   SessionAttempt,
   StepOutcome,
-  StudySession,
   SupportTier,
 } from "../types/models";
 import { decideReviewCard, decideStepTier, TierDecision } from "./adaptiveEngine";
@@ -103,17 +102,23 @@ export interface AdaptationResult {
 }
 
 /**
- * Call after a step's final (non-break) log has been saved in `attempt`.
+ * Call after a step's final (non-break) log has been saved.
  * Escalations update the session immediately; fades become a pending
  * adjustment. At most one pending fade exists per step.
+ * Re-reads the session so an earlier step's change in the same run
+ * is never overwritten by a stale copy.
  */
 export async function adaptStep(
-  session: StudySession,
+  sessionId: string,
   stepId: string,
   nowIso: string
 ): Promise<AdaptationResult> {
-  const step = session.steps.find((s) => s.id === stepId);
-  if (!step) throw new Error(`Step ${stepId} not in session ${session.id}`);
+  const session = await db.getSession(sessionId);
+  const step = session?.steps.find((s) => s.id === stepId);
+  if (!session || !step) {
+    // Session or step was deleted mid-run; nothing to adapt.
+    return { decision: { nextTier: 0, changed: false, direction: "none", reason: "Step no longer exists.", requiresParentApproval: false } };
+  }
 
   const [attempts, adjustments] = await Promise.all([
     db.listSessionAttempts(session.childId),

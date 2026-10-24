@@ -20,6 +20,8 @@ function RootStack() {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="pin" options={{ title: "Parent Mode", presentation: "modal" }} />
+        <Stack.Screen name="sessions" options={{ title: "Choose a session" }} />
+        <Stack.Screen name="session/[id]" options={{ title: "" }} />
         <Stack.Protected guard={parentUnlocked} redirectTo="/pin">
           <Stack.Screen name="parent" options={{ headerShown: false }} />
         </Stack.Protected>
