@@ -23,7 +23,16 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AdaptiveSteps uses your photos to add pictures to study steps and review cards.",
+          "cameraPermission": "AdaptiveSteps uses the camera to take pictures for study steps and review cards.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-image"
     ]
   }
 }
