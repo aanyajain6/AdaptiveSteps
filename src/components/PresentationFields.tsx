@@ -7,7 +7,7 @@ import Slider from "@react-native-community/slider";
 import { View } from "react-native";
 import { buildTheme, MAX_TEXT_SCALE, MIN_TEXT_SCALE } from "../theme/theme";
 import { useAppTheme } from "../state/AppProvider";
-import { AppText, ToggleRow } from "./ui";
+import { AppText, Button, ToggleRow } from "./ui";
 
 export interface PresentationValues {
   textScale: number;
@@ -29,6 +29,9 @@ export function PresentationFields({
     textScale: value.textScale,
   });
   const percent = Math.round(value.textScale * 100);
+  const STEP = 0.25;
+  const setScale = (s: number) =>
+    onChange({ ...value, textScale: Math.max(MIN_TEXT_SCALE, Math.min(MAX_TEXT_SCALE, s)) });
 
   return (
     <View style={{ gap: 14 }}>
@@ -41,14 +44,33 @@ export function PresentationFields({
           accessibilityValue={{ text: `${percent} percent` }}
           minimumValue={MIN_TEXT_SCALE}
           maximumValue={MAX_TEXT_SCALE}
-          step={0.25}
+          step={STEP}
           value={value.textScale}
-          onValueChange={(textScale) => onChange({ ...value, textScale })}
+          onValueChange={setScale}
           minimumTrackTintColor={theme.colors.primary}
           maximumTrackTintColor={theme.colors.border}
           thumbTintColor={theme.colors.primary}
           style={{ height: 48 }}
         />
+        {/* Buttons too: sliders are hard to operate by keyboard or with limited fine-motor control. */}
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Button
+            label="Smaller text"
+            icon="A−"
+            variant="secondary"
+            disabled={value.textScale <= MIN_TEXT_SCALE}
+            onPress={() => setScale(value.textScale - STEP)}
+            style={{ flex: 1 }}
+          />
+          <Button
+            label="Larger text"
+            icon="A+"
+            variant="secondary"
+            disabled={value.textScale >= MAX_TEXT_SCALE}
+            onPress={() => setScale(value.textScale + STEP)}
+            style={{ flex: 1 }}
+          />
+        </View>
       </View>
 
       <View

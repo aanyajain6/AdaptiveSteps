@@ -18,6 +18,7 @@ export default function ParentLayout() {
       <Stack.Screen name="sessions/index" options={{ title: "Study sessions" }} />
       <Stack.Screen name="cards/index" options={{ title: "Review cards" }} />
       <Stack.Screen name="dashboard" options={{ title: "Progress" }} />
+      <Stack.Screen name="accessibility" options={{ title: "Accessibility" }} />
     </Stack>
   );
 }
