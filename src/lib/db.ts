@@ -72,6 +72,22 @@ export async function deleteChild(childId: string): Promise<void> {
   await writeAll(KEYS.children, all.filter((c) => c.id !== childId));
 }
 
+/** Removes a child and everything recorded about them -- nothing orphaned is left on the device. */
+export async function deleteChildAndData(childId: string): Promise<void> {
+  await deleteChild(childId);
+  const keys = [
+    KEYS.sessions,
+    KEYS.sessionAttempts,
+    KEYS.reviewCards,
+    KEYS.reviewAttempts,
+    KEYS.adjustments,
+  ];
+  for (const key of keys) {
+    const all = await readAll<{ childId: string }>(key);
+    await writeAll(key, all.filter((item) => item.childId !== childId));
+  }
+}
+
 // ---------- Study Sessions ----------
 export async function listSessions(childId?: string): Promise<StudySession[]> {
   const all = await readAll<StudySession>(KEYS.sessions);

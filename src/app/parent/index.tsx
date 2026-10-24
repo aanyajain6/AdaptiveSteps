@@ -20,7 +20,9 @@ export default function ParentHome() {
         <AppText variant="heading">{activeChild?.name ?? "No profile yet"}</AppText>
       </Card>
 
-      <View style={{ gap: 12 }} />
+      <View style={{ gap: 12 }}>
+        <Button label="Child profiles" variant="secondary" icon="👤" onPress={() => router.push("/parent/children")} />
+      </View>
 
       <Button label="Back to Child Mode" variant="secondary" onPress={exitParentMode} />
     </Screen>

@@ -14,6 +14,7 @@ export default function ParentLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "Parent Mode" }} />
+      <Stack.Screen name="children/index" options={{ title: "Child profiles" }} />
     </Stack>
   );
 }
