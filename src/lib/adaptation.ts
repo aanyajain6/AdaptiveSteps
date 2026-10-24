@@ -28,7 +28,7 @@ function lastEventAt(adj: AdaptiveAdjustment): string {
   return adj.resolvedAt ?? adj.createdAt;
 }
 
-function isPending(adj: AdaptiveAdjustment): boolean {
+export function isPending(adj: AdaptiveAdjustment): boolean {
   return adj.requiresParentApproval && !adj.approved && (adj.status ?? "pending") === "pending";
 }
 
