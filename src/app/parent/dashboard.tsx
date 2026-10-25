@@ -11,7 +11,8 @@ import { useWindowDimensions, View } from "react-native";
 import { BarChart, LineChart } from "react-native-chart-kit/v2";
 import { ChartCard, chartTheme } from "../../components/ChartCard";
 import { MOODS } from "../../components/MoodCheckIn";
-import { AppText, Button, Card, Screen } from "../../components/ui";
+import { Check, Info, ShieldCheck } from "lucide-react-native";
+import { AppText, Badge, Button, Card, Icon, IconTile, Screen, Section } from "../../components/ui";
 import { approveAdjustment, declineAdjustment, isPending } from "../../lib/adaptation";
 import * as db from "../../lib/db";
 import {
@@ -25,6 +26,7 @@ import {
 import { CARD_TIER_LABELS, TIER_LABELS } from "../../lib/tiers";
 import { nowIso } from "../../lib/time";
 import { useApp } from "../../state/AppProvider";
+import { radius, space } from "../../theme/theme";
 import {
   AdaptiveAdjustment,
   Mood,
@@ -146,24 +148,38 @@ export default function Dashboard() {
 
   return (
     <Screen>
-      <AppText muted>Progress for {activeChild.name}</AppText>
+      <View style={{ gap: space.xs }}>
+        <AppText variant="overline" muted>
+          Learner
+        </AppText>
+        <AppText variant="display">{activeChild.name}</AppText>
+      </View>
 
-      {/* ---- Needs your OK ---- */}
+      {/* ---- Needs your review ---- */}
       {pending.length > 0 && (
-        <Card style={{ borderColor: theme.colors.primary, borderWidth: 2 }}>
-          <AppText variant="heading">Needs your OK ({pending.length})</AppText>
-          <AppText variant="caption" muted>
-            Support is only ever reduced with your approval.
-          </AppText>
+        <Card raised style={{ gap: space.lg }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+            <IconTile icon={ShieldCheck} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText variant="heading">Needs your review</AppText>
+              <AppText variant="caption" muted>
+                Support is only reduced with your approval.
+              </AppText>
+            </View>
+            <Badge label={String(pending.length)} />
+          </View>
           {pending.map((adj) => (
-            <View key={adj.id} style={{ gap: 6, paddingTop: 8 }}>
-              <AppText style={{ fontWeight: "700" }}>{itemName(adj)}</AppText>
+            <View
+              key={adj.id}
+              style={{ gap: space.sm, paddingTop: space.lg, borderTopWidth: 1, borderTopColor: theme.colors.border }}
+            >
+              <AppText variant="label">{itemName(adj)}</AppText>
               <AppText>{adj.reason}</AppText>
               <AppText variant="caption" muted>
-                {tierName(adj, adj.fromTier)} → {tierName(adj, adj.toTier)} · suggested {shortDate(adj.createdAt)}
+                {tierName(adj, adj.fromTier)} → {tierName(adj, adj.toTier)} · Suggested {shortDate(adj.createdAt)}
               </AppText>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <Button label="Approve" onPress={() => approve(adj)} style={{ flex: 1 }} />
+              <View style={{ flexDirection: "row", gap: space.sm, paddingTop: space.xs }}>
+                <Button label="Approve" icon={Check} onPress={() => approve(adj)} style={{ flex: 1 }} />
                 <Button label="Not yet" variant="secondary" onPress={() => decline(adj)} style={{ flex: 1 }} />
               </View>
             </View>
@@ -171,196 +187,222 @@ export default function Dashboard() {
         </Card>
       )}
       {notice ? (
-        <AppText accessibilityLiveRegion="polite" variant="caption">
-          {notice}
-        </AppText>
+        <View
+          accessibilityLiveRegion="polite"
+          style={{ flexDirection: "row", gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: theme.colors.primarySoft }}
+        >
+          <Icon icon={Info} size={18} color={theme.colors.primary} />
+          <AppText variant="caption" style={{ flex: 1, color: theme.colors.text }}>
+            {notice}
+          </AppText>
+        </View>
       ) : null}
 
       {/* ---- Headline numbers ---- */}
-      <View style={{ flexDirection: "row", gap: 12 }}>
-        <Card style={{ flex: 1 }}>
-          <AppText variant="caption" muted>
-            Steps done without help
-          </AppText>
-          <AppText variant="title">{independent.rate === null ? "–" : pct(independent.rate)}</AppText>
-          <AppText variant="caption" muted>
-            {independent.rate === null
-              ? "No steps yet"
-              : `Last 5 sessions: ${recentIndependent.rate === null ? "–" : pct(recentIndependent.rate)}`}
-          </AppText>
-        </Card>
-        <Card style={{ flex: 1 }}>
-          <AppText variant="caption" muted>
-            Cards mastered
-          </AppText>
-          <AppText variant="title">
-            {mastered.mastered}/{mastered.total}
-          </AppText>
-          <AppText variant="caption" muted>
-            Recalled alone, {MASTERY_INTERVAL_DAYS}+ days apart
-          </AppText>
-        </Card>
-      </View>
+      <Section title="At a glance">
+        <View style={{ flexDirection: "row", gap: space.md }}>
+          <StatTile
+            label="Steps done without help"
+            value={independent.rate === null ? "–" : pct(independent.rate)}
+            detail={
+              independent.rate === null
+                ? "No steps yet"
+                : `Last 5 sessions: ${recentIndependent.rate === null ? "–" : pct(recentIndependent.rate)}`
+            }
+          />
+          <StatTile
+            label="Cards mastered"
+            value={`${mastered.mastered}/${mastered.total}`}
+            detail={`Recalled alone, ${MASTERY_INTERVAL_DAYS}+ days apart`}
+          />
+        </View>
+      </Section>
 
       {/* ---- Study sessions ---- */}
-      <ChartCard
-        title="Prompts needed per session"
-        explanation="How many times help was asked for in each session. Going down over time means more independence."
-        summary={
-          prompts.length
-            ? `Prompts per session, last ${prompts.length}: ${prompts.map((p) => p.prompts).join(", ")}.`
-            : "No sessions yet."
-        }
-        rows={prompts.map((p) => [p.label, `${p.prompts} ${p.prompts === 1 ? "prompt" : "prompts"}`])}
-        empty={prompts.length < 2 ? "This chart appears after two sessions." : undefined}
-      >
-        <LineChart
-          data={prompts}
-          xKey="label"
-          yKey="prompts"
-          width={chartWidth}
-          height={200}
-          theme={ct}
-          yDomain={{ min: 0, includeZero: true }}
-          formatYLabel={(v) => String(Math.round(v))}
-          tooltip
-          showVerticalGridLines={false}
-        />
-      </ChartCard>
+      <Section title="Study sessions">
+        <ChartCard
+          title="Prompts needed per session"
+          explanation="How many times help was asked for in each session. Going down over time means more independence."
+          summary={
+            prompts.length
+              ? `Prompts per session, last ${prompts.length}: ${prompts.map((p) => p.prompts).join(", ")}.`
+              : "No sessions yet."
+          }
+          rows={prompts.map((p) => [p.label, `${p.prompts} ${p.prompts === 1 ? "prompt" : "prompts"}`])}
+          empty={prompts.length < 2 ? "This chart appears after two sessions." : undefined}
+        >
+          <LineChart
+            data={prompts}
+            xKey="label"
+            yKey="prompts"
+            width={chartWidth}
+            height={200}
+            theme={ct}
+            yDomain={{ min: 0, includeZero: true }}
+            formatYLabel={(v) => String(Math.round(v))}
+            tooltip
+            showVerticalGridLines={false}
+          />
+        </ChartCard>
 
-      <Card>
-        <AppText variant="heading">Hardest steps</AppText>
-        <AppText variant="caption" muted>
-          {"Steps where help was asked for most often. Breaks don't count."}
-        </AppText>
-        {hardest.length === 0 ? (
-          <AppText muted>Nothing has needed help yet.</AppText>
-        ) : (
-          hardest.map((s) => (
-            <View
-              key={s.stepId}
-              accessible
-              accessibilityLabel={`${s.label}, in ${s.sessionTitle}: needed help ${pct(s.helpRate)} of ${s.attempts} times`}
-              style={{ gap: 4, paddingTop: 4 }}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-                <AppText style={{ flex: 1 }}>{s.label}</AppText>
-                <AppText style={{ fontWeight: "700" }}>{pct(s.helpRate)}</AppText>
-              </View>
-              <View style={{ height: 8, borderRadius: 4, backgroundColor: theme.colors.primarySoft }}>
-                <View
-                  style={{
-                    width: `${Math.max(4, s.helpRate * 100)}%`,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: theme.colors.primary,
-                  }}
-                />
-              </View>
-              <AppText variant="caption" muted>
-                {s.sessionTitle} · {s.attempts} {s.attempts === 1 ? "try" : "tries"}
-              </AppText>
-            </View>
-          ))
-        )}
-      </Card>
-
-      {/* ---- Review cards ---- */}
-      <ChartCard
-        title="Review card retention"
-        explanation="Share of review answers recalled without a hint, by week."
-        summary={
-          retention.length
-            ? `Weekly retention: ${retention.map((w) => `${w.label} ${w.percent}%`).join(", ")}.`
-            : "No reviews yet."
-        }
-        rows={retention.map((w) => [`Week of ${w.label}`, `${w.percent}% of ${w.reviews}`])}
-        empty={retention.length < 2 ? "This chart appears after two weeks of practice." : undefined}
-      >
-        <LineChart
-          data={retention}
-          xKey="label"
-          yKey="percent"
-          width={chartWidth}
-          height={200}
-          theme={ct}
-          yDomain={[0, 100]}
-          formatYLabel={(v) => `${Math.round(v)}%`}
-          tooltip
-          showVerticalGridLines={false}
-        />
-      </ChartCard>
-
-      <ChartCard
-        title="Cards by support level"
-        explanation="Where each card is now. Cards move toward “Recall on own” as they're learned."
-        summary={`Cards by support level: ${tierCounts.map((t) => `${t.tier} ${t.cards}`).join(", ")}.`}
-        rows={tierCounts.map((t) => [t.tier, String(t.cards)])}
-        empty={data.cards.length === 0 ? "No review cards yet." : undefined}
-      >
-        <BarChart
-          data={tierCounts}
-          xKey="tier"
-          yKey="cards"
-          orientation="horizontal"
-          width={chartWidth}
-          height={180}
-          theme={ct}
-          barRadius={4}
-          showValuesOnTopOfBars
-          // Whole-card ticks only, with headroom so the end value label isn't clipped.
-          yDomain={[0, maxTierCount + 1]}
-          yTickCount={Math.min(maxTierCount + 1, 5) + 1}
-          formatYLabel={(v) => (Number.isInteger(v) ? String(v) : "")}
-          tooltip={false}
-        />
-      </ChartCard>
-
-      {/* ---- Recent sessions with mood ---- */}
-      <Card>
-        <AppText variant="heading">Recent sessions</AppText>
-        {recent.length === 0 && <AppText muted>No sessions yet.</AppText>}
-        {recent.map((a) => {
-          const title = data.sessions.find((s) => s.id === a.sessionId)?.title ?? "Deleted session";
-          const steps = a.stepLogs.filter((l) => l.outcome !== "break").length;
-          const breaks = a.stepLogs.filter((l) => l.outcome === "break").length;
-          return (
-            <View key={a.id} style={{ flexDirection: "row", justifyContent: "space-between", gap: 8, paddingTop: 4 }}>
-              <View style={{ flex: 1 }}>
-                <AppText>{title}</AppText>
-                <AppText variant="caption" muted>
-                  {shortDate(a.startedAt)} · {steps} {steps === 1 ? "step" : "steps"}
-                  {breaks ? ` · ${breaks} ${breaks === 1 ? "break" : "breaks"}` : ""}
-                  {a.completedAt ? "" : " · stopped early"}
-                </AppText>
-              </View>
-              <AppText
-                accessibilityLabel={`Mood before ${a.moodBefore ?? "not given"}, after ${a.moodAfter ?? "not given"}`}
-                style={{ fontSize: theme.font(22) }}
-              >
-                {moodEmoji(a.moodBefore)} → {moodEmoji(a.moodAfter)}
-              </AppText>
-            </View>
-          );
-        })}
-      </Card>
-
-      {/* ---- Explainable log ---- */}
-      <Card>
-        <AppText variant="heading">Why support changed</AppText>
-        {history.length === 0 && <AppText muted>No changes yet.</AppText>}
-        {history.map((adj) => (
-          <View key={adj.id} style={{ gap: 2, paddingTop: 6 }}>
-            <AppText style={{ fontWeight: "700" }}>{itemName(adj)}</AppText>
-            <AppText>{adj.reason}</AppText>
+        <Card>
+          <View style={{ gap: space.xs }}>
+            <AppText variant="heading">Hardest steps</AppText>
             <AppText variant="caption" muted>
-              {tierName(adj, adj.fromTier)} → {tierName(adj, adj.toTier)} · {shortDate(adj.resolvedAt ?? adj.createdAt)} ·{" "}
-              {statusText(adj)}
+              {"Where help was asked for most often. Breaks don't count."}
             </AppText>
           </View>
-        ))}
-      </Card>
+          {hardest.length === 0 ? (
+            <AppText muted>Nothing has needed help yet.</AppText>
+          ) : (
+            hardest.map((s) => (
+              <View
+                key={s.stepId}
+                accessible
+                accessibilityLabel={`${s.label}, in ${s.sessionTitle}: needed help ${pct(s.helpRate)} of ${s.attempts} times`}
+                style={{ gap: 6 }}
+              >
+                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
+                  <AppText variant="label" style={{ flex: 1 }}>
+                    {s.label}
+                  </AppText>
+                  <AppText variant="label">{pct(s.helpRate)}</AppText>
+                </View>
+                <View style={{ height: 6, borderRadius: radius.pill, backgroundColor: theme.colors.surfaceSunken }}>
+                  <View
+                    style={{
+                      width: `${Math.max(4, s.helpRate * 100)}%`,
+                      height: 6,
+                      borderRadius: radius.pill,
+                      backgroundColor: theme.colors.chart,
+                    }}
+                  />
+                </View>
+                <AppText variant="caption" muted>
+                  {s.sessionTitle} · {s.attempts} {s.attempts === 1 ? "try" : "tries"}
+                </AppText>
+              </View>
+            ))
+          )}
+        </Card>
+
+      </Section>
+
+      {/* ---- Review cards ---- */}
+      <Section title="Review cards">
+        <ChartCard
+          title="Review card retention"
+          explanation="Share of review answers recalled without a hint, by week."
+          summary={
+            retention.length
+              ? `Weekly retention: ${retention.map((w) => `${w.label} ${w.percent}%`).join(", ")}.`
+              : "No reviews yet."
+          }
+          rows={retention.map((w) => [`Week of ${w.label}`, `${w.percent}% of ${w.reviews}`])}
+          empty={retention.length < 2 ? "This chart appears after two weeks of practice." : undefined}
+        >
+          <LineChart
+            data={retention}
+            xKey="label"
+            yKey="percent"
+            width={chartWidth}
+            height={200}
+            theme={ct}
+            yDomain={[0, 100]}
+            formatYLabel={(v) => `${Math.round(v)}%`}
+            tooltip
+            showVerticalGridLines={false}
+          />
+        </ChartCard>
+
+        <ChartCard
+          title="Cards by support level"
+          explanation="Where each card is now. Cards move toward “Recall on own” as they're learned."
+          summary={`Cards by support level: ${tierCounts.map((t) => `${t.tier} ${t.cards}`).join(", ")}.`}
+          rows={tierCounts.map((t) => [t.tier, String(t.cards)])}
+          empty={data.cards.length === 0 ? "No review cards yet." : undefined}
+        >
+          <BarChart
+            data={tierCounts}
+            xKey="tier"
+            yKey="cards"
+            orientation="horizontal"
+            width={chartWidth}
+            height={180}
+            theme={ct}
+            barRadius={4}
+            showValuesOnTopOfBars
+            // Whole-card ticks only, with headroom so the end value label isn't clipped.
+            yDomain={[0, maxTierCount + 1]}
+            yTickCount={Math.min(maxTierCount + 1, 5) + 1}
+            formatYLabel={(v) => (Number.isInteger(v) ? String(v) : "")}
+            tooltip={false}
+          />
+        </ChartCard>
+
+      </Section>
+
+      {/* ---- Recent sessions with mood ---- */}
+      <Section title="Activity">
+        <Card>
+          <AppText variant="heading">Recent sessions</AppText>
+          {recent.length === 0 && <AppText muted>No sessions yet.</AppText>}
+          {recent.map((a) => {
+            const title = data.sessions.find((s) => s.id === a.sessionId)?.title ?? "Deleted session";
+            const steps = a.stepLogs.filter((l) => l.outcome !== "break").length;
+            const breaks = a.stepLogs.filter((l) => l.outcome === "break").length;
+            return (
+              <View key={a.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.sm }}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <AppText variant="label">{title}</AppText>
+                  <AppText variant="caption" muted>
+                    {shortDate(a.startedAt)} · {steps} {steps === 1 ? "step" : "steps"}
+                    {breaks ? ` · ${breaks} ${breaks === 1 ? "break" : "breaks"}` : ""}
+                    {a.completedAt ? "" : " · stopped early"}
+                  </AppText>
+                </View>
+                <AppText
+                  accessibilityLabel={`Mood before ${a.moodBefore ?? "not given"}, after ${a.moodAfter ?? "not given"}`}
+                  style={{ fontSize: theme.font(22) }}
+                >
+                  {moodEmoji(a.moodBefore)} → {moodEmoji(a.moodAfter)}
+                </AppText>
+              </View>
+            );
+          })}
+        </Card>
+
+        {/* ---- Explainable log ---- */}
+        <Card>
+          <AppText variant="heading">Why support changed</AppText>
+          {history.length === 0 && <AppText muted>No changes yet.</AppText>}
+          {history.map((adj) => (
+            <View key={adj.id} style={{ gap: 2 }}>
+              <AppText variant="label">{itemName(adj)}</AppText>
+              <AppText>{adj.reason}</AppText>
+              <AppText variant="caption" muted>
+                {tierName(adj, adj.fromTier)} → {tierName(adj, adj.toTier)} · {shortDate(adj.resolvedAt ?? adj.createdAt)} ·{" "}
+                {statusText(adj)}
+              </AppText>
+            </View>
+          ))}
+        </Card>
+      </Section>
     </Screen>
+  );
+}
+
+function StatTile({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <Card style={{ flex: 1, gap: space.xs }}>
+      <AppText variant="caption" muted>
+        {label}
+      </AppText>
+      <AppText variant="display">{value}</AppText>
+      <AppText variant="caption" muted>
+        {detail}
+      </AppText>
+    </Card>
   );
 }
 

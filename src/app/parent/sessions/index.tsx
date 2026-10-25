@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
+import { ClipboardList, Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { AppText, Button, Card, Screen } from "../../../components/ui";
+import { AppText, Button, ListGroup, ListRow, Screen, Section } from "../../../components/ui";
 import * as db from "../../../lib/db";
 import { useApp } from "../../../state/AppProvider";
 import { StudySession } from "../../../types/models";
@@ -25,26 +26,30 @@ export default function SessionsList() {
 
   return (
     <Screen>
-      <AppText muted>Study sessions for {activeChild.name}</AppText>
+      <AppText muted>
+        Break homework into small, concrete steps. {activeChild.name} sees one at a time.
+      </AppText>
 
-      {sessions.map((s) => (
-        <Card key={s.id}>
-          <AppText variant="heading">{s.title}</AppText>
-          <AppText variant="caption" muted>
-            {s.subject ? `${s.subject} · ` : ""}
-            {s.steps.length} {s.steps.length === 1 ? "step" : "steps"}
-          </AppText>
-          <Button
-            label="Edit"
-            variant="secondary"
-            onPress={() => router.push({ pathname: "/parent/sessions/[id]", params: { id: s.id } })}
-          />
-        </Card>
-      ))}
+      {sessions.length > 0 && (
+        <Section title={`${activeChild.name}'s sessions`}>
+          <ListGroup>
+            {sessions.map((s) => (
+              <ListRow
+                key={s.id}
+                icon={ClipboardList}
+                title={s.title}
+                subtitle={`${s.subject ? `${s.subject} · ` : ""}${s.steps.length} ${s.steps.length === 1 ? "step" : "steps"}`}
+                accessibilityHint="Edit this session"
+                onPress={() => router.push({ pathname: "/parent/sessions/[id]", params: { id: s.id } })}
+              />
+            ))}
+          </ListGroup>
+        </Section>
+      )}
 
       <Button
         label="New session"
-        icon="＋"
+        icon={Plus}
         onPress={() => router.push({ pathname: "/parent/sessions/[id]", params: { id: "new" } })}
       />
     </Screen>

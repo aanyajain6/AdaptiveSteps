@@ -4,8 +4,9 @@
 // theme, so a parent sees the change before saving it.
 
 import Slider from "@react-native-community/slider";
+import { AArrowDown, AArrowUp } from "lucide-react-native";
 import { View } from "react-native";
-import { buildTheme, MAX_TEXT_SCALE, MIN_TEXT_SCALE } from "../theme/theme";
+import { buildTheme, MAX_TEXT_SCALE, MIN_TEXT_SCALE, radius, space } from "../theme/theme";
 import { useAppTheme } from "../state/AppProvider";
 import { AppText, Button, ToggleRow } from "./ui";
 
@@ -36,9 +37,12 @@ export function PresentationFields({
   return (
     <View style={{ gap: 14 }}>
       <View style={{ gap: 4 }}>
-        <AppText variant="caption" muted>
-          Text size: {percent}%
-        </AppText>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <AppText variant="label">Text size</AppText>
+          <AppText variant="label" style={{ color: theme.colors.primary }}>
+            {percent}%
+          </AppText>
+        </View>
         <Slider
           accessibilityLabel="Text size"
           accessibilityValue={{ text: `${percent} percent` }}
@@ -56,7 +60,7 @@ export function PresentationFields({
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Button
             label="Smaller text"
-            icon="A−"
+            icon={AArrowDown}
             variant="secondary"
             disabled={value.textScale <= MIN_TEXT_SCALE}
             onPress={() => setScale(value.textScale - STEP)}
@@ -64,7 +68,7 @@ export function PresentationFields({
           />
           <Button
             label="Larger text"
-            icon="A+"
+            icon={AArrowUp}
             variant="secondary"
             disabled={value.textScale >= MAX_TEXT_SCALE}
             onPress={() => setScale(value.textScale + STEP)}
@@ -76,22 +80,18 @@ export function PresentationFields({
       <View
         accessibilityLabel="Preview"
         style={{
-          padding: 16,
-          borderRadius: preview.radius,
+          padding: space.lg,
+          gap: space.xs,
+          borderRadius: radius.md,
           borderWidth: preview.borderWidth,
           borderColor: preview.colors.border,
           backgroundColor: preview.colors.background,
         }}
       >
-        <AppText
-          style={{
-            color: preview.colors.text,
-            fontSize: preview.font(17),
-            lineHeight: Math.round(preview.font(17) * 1.35),
-          }}
-        >
-          Step 1: Get out your math worksheet.
+        <AppText variant="overline" style={{ color: preview.colors.textMuted, fontSize: preview.font(12) }}>
+          Preview · Step 1 of 4
         </AppText>
+        <AppText style={[preview.type("title"), { color: preview.colors.text }]}>Get out your math worksheet</AppText>
       </View>
 
       <ToggleRow

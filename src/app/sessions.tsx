@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
+import { ClipboardList } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { AppText, Button, Screen } from "../components/ui";
+import { AppText, ListGroup, ListRow, Screen } from "../components/ui";
 import * as db from "../lib/db";
 import { useApp } from "../state/AppProvider";
 import { StudySession } from "../types/models";
@@ -18,17 +19,21 @@ export default function ChooseSession() {
   return (
     <Screen>
       {sessions?.length === 0 && (
-        <AppText muted>No sessions yet. Ask a grown-up to make one for you.</AppText>
+        <AppText muted>No study sessions yet. Ask a grown-up to add one.</AppText>
       )}
-      {sessions?.map((s) => (
-        <Button
-          key={s.id}
-          big
-          variant="secondary"
-          label={s.title}
-          onPress={() => router.push({ pathname: "/session/[id]", params: { id: s.id } })}
-        />
-      ))}
+      {sessions && sessions.length > 0 && (
+        <ListGroup>
+          {sessions.map((s) => (
+            <ListRow
+              key={s.id}
+              icon={ClipboardList}
+              title={s.title}
+              subtitle={`${s.subject ? `${s.subject} · ` : ""}${s.steps.length} ${s.steps.length === 1 ? "step" : "steps"}`}
+              onPress={() => router.push({ pathname: "/session/[id]", params: { id: s.id } })}
+            />
+          ))}
+        </ListGroup>
+      )}
     </Screen>
   );
 }

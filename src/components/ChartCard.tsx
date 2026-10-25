@@ -3,9 +3,10 @@
 // never available only as a picture (screen readers, color vision).
 
 import { useState } from "react";
-import { Platform, View } from "react-native";
+import { ChevronUp, Table2 } from "lucide-react-native";
+import { View } from "react-native";
 import type { CartesianChartTheme } from "react-native-chart-kit/v2";
-import { Theme } from "../theme/theme";
+import { fonts, space, Theme } from "../theme/theme";
 import { AppText, Button, Card } from "./ui";
 
 export function chartTheme(theme: Theme): CartesianChartTheme {
@@ -17,10 +18,9 @@ export function chartTheme(theme: Theme): CartesianChartTheme {
     axis: c.border,
     text: c.text,
     mutedText: c.textMuted,
-    series: [c.primary],
+    series: [c.chart],
     typography: {
-      // SVG text on web otherwise falls back to the browser's serif default.
-      fontFamily: Platform.OS === "web" ? "system-ui, -apple-system, sans-serif" : undefined,
+      fontFamily: fonts.medium,
       axisLabelSize: theme.font(12),
       legendLabelSize: theme.font(12),
     },
@@ -48,10 +48,12 @@ export function ChartCard({
   const [showTable, setShowTable] = useState(false);
   return (
     <Card>
-      <AppText variant="heading">{title}</AppText>
-      <AppText variant="caption" muted>
-        {explanation}
-      </AppText>
+      <View style={{ gap: space.xs }}>
+        <AppText variant="heading">{title}</AppText>
+        <AppText variant="caption" muted>
+          {explanation}
+        </AppText>
+      </View>
       {empty ? (
         <AppText muted>{empty}</AppText>
       ) : (
@@ -61,8 +63,10 @@ export function ChartCard({
           </View>
           <Button
             label={showTable ? "Hide numbers" : "Show numbers"}
-            variant="quiet"
+            icon={showTable ? ChevronUp : Table2}
+            variant="ghost"
             onPress={() => setShowTable((s) => !s)}
+            style={{ alignSelf: "flex-start", paddingHorizontal: 0 }}
           />
           {showTable &&
             rows.map(([k, v], i) => (

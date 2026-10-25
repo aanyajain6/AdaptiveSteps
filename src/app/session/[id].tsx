@@ -12,27 +12,42 @@
 
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import type { LucideIcon } from "lucide-react-native";
+import {
+  Check,
+  Clock,
+  Coffee,
+  Hand,
+  House,
+  Lightbulb,
+  PartyPopper,
+  Play,
+  ThumbsDown,
+  ThumbsUp,
+  Volume2,
+} from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Celebration, CELEBRATION_MS } from "../../components/Celebration";
 import { MoodCheckIn } from "../../components/MoodCheckIn";
-import { AppText, Button, Card, Screen } from "../../components/ui";
+import { AppText, Button, Card, Icon, Screen } from "../../components/ui";
 import { adaptStep } from "../../lib/adaptation";
 import * as db from "../../lib/db";
 import { boostedTier, presentStep } from "../../lib/presentation";
 import { speak, stopSpeaking } from "../../lib/speech";
 import { nowIso, nowMs } from "../../lib/time";
-import { useApp } from "../../state/AppProvider";
+import { useApp, useAppTheme } from "../../state/AppProvider";
+import { radius, space } from "../../theme/theme";
 import { ChoiceResponse, Mood, SessionAttempt, StudySession } from "../../types/models";
 
 type Phase = "loading" | "missing" | "moodBefore" | "step" | "celebrate" | "break" | "moodAfter" | "finished";
 type StepLog = SessionAttempt["stepLogs"][number];
 
-const CHOICES: { value: ChoiceResponse; emoji: string; label: string; reply?: string }[] = [
-  { value: "yes", emoji: "👍", label: "Yes", reply: "Okay!" },
-  { value: "no", emoji: "👎", label: "No", reply: "That's okay. You can ask for help or take a break." },
-  { value: "more_time", emoji: "⏳", label: "More time", reply: "Take all the time you need." },
-  { value: "help", emoji: "🙋", label: "Help" },
+const CHOICES: { value: ChoiceResponse; icon: LucideIcon; label: string; reply?: string }[] = [
+  { value: "yes", icon: ThumbsUp, label: "Yes", reply: "Okay!" },
+  { value: "no", icon: ThumbsDown, label: "No", reply: "That's okay. You can ask for help or take a break." },
+  { value: "more_time", icon: Clock, label: "More time", reply: "Take all the time you need." },
+  { value: "help", icon: Hand, label: "Help" },
 ];
 
 export default function SessionRunner() {
@@ -176,7 +191,7 @@ export default function SessionRunner() {
   if (phase === "missing") {
     return (
       <Screen>
-        <AppText>{"This session isn't available any more."}</AppText>
+        <AppText>{"This session isn't available anymore."}</AppText>
         <Button label="Go back" onPress={() => router.back()} />
       </Screen>
     );
@@ -188,6 +203,7 @@ export default function SessionRunner() {
         <Stack.Screen options={{ title }} />
         <MoodCheckIn
           prompt={phase === "moodBefore" ? "How are you feeling?" : "How do you feel now?"}
+          subtitle={phase === "moodBefore" ? "Pick the face that fits. Any answer is okay." : "You finished every step."}
           onPick={phase === "moodBefore" ? startSession : finish}
         />
       </Screen>
@@ -196,29 +212,25 @@ export default function SessionRunner() {
 
   if (phase === "finished") {
     return (
-      <Screen style={{ justifyContent: "center", alignItems: "center" }}>
+      <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={{ title }} />
-        <Text style={{ fontSize: 88 }}>🎉</Text>
-        <AppText variant="title" style={{ textAlign: "center" }}>
-          You did it! All done.
-        </AppText>
-        <Button label="Back home" big onPress={() => router.dismissTo("/")} style={{ alignSelf: "stretch" }} />
+        <Moment icon={PartyPopper} title="All done!" body={`You finished ${title}.`} />
+        <Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />
       </Screen>
     );
   }
 
   if (phase === "break") {
     return (
-      <Screen style={{ justifyContent: "center", alignItems: "center" }}>
+      <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={{ title }} />
-        <Text style={{ fontSize: 88 }}>🌿</Text>
-        <AppText variant="title" style={{ textAlign: "center" }}>
-          Break time
-        </AppText>
-        <AppText muted style={{ textAlign: "center" }}>
-          Take your time. Stretch, get some water, take a few slow breaths.
-        </AppText>
-        <Button label="I'm ready" big onPress={endBreak} style={{ alignSelf: "stretch" }} />
+        <Moment
+          icon={Coffee}
+          title="Break time"
+          body="Take your time. Stretch, get some water, or take a few slow breaths."
+          tone="neutral"
+        />
+        <Button label="I'm ready" icon={Play} size="lg" onPress={endBreak} />
       </Screen>
     );
   }
@@ -231,12 +243,8 @@ export default function SessionRunner() {
       <Stack.Screen options={{ title }} />
 
       {/* Progress strip -- position only, no clock. */}
-      <View
-        accessible
-        accessibilityLabel={`Step ${index + 1} of ${total}`}
-        style={{ gap: 8 }}
-      >
-        <AppText variant="caption" muted>
+      <View accessible accessibilityLabel={`Step ${index + 1} of ${total}`} style={{ gap: space.sm }}>
+        <AppText variant="overline" muted>
           Step {index + 1} of {total}
         </AppText>
         <View style={{ flexDirection: "row", gap: 6 }}>
@@ -245,14 +253,14 @@ export default function SessionRunner() {
               key={s.id}
               style={{
                 flex: 1,
-                height: 10,
-                borderRadius: 5,
+                height: 6,
+                borderRadius: radius.pill,
                 backgroundColor:
                   i < index || (i === index && phase === "celebrate")
                     ? c.success
                     : i === index
                       ? c.primary
-                      : c.border,
+                      : c.borderStrong,
               }}
             />
           ))}
@@ -263,11 +271,20 @@ export default function SessionRunner() {
         <Celebration />
       ) : (
         <>
-          <Card style={{ gap: 14 }}>
-            <AppText variant="title">{step.label}</AppText>
+          <Card raised style={{ gap: space.lg, padding: space.xl }}>
+            <AppText variant="display">{step.label}</AppText>
             {view.showHint && (
-              <View style={{ backgroundColor: c.primarySoft, borderRadius: theme.radius, padding: 12 }}>
-                <AppText>💡 {step.hint}</AppText>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: space.md,
+                  backgroundColor: c.primarySoft,
+                  borderRadius: radius.md,
+                  padding: space.md,
+                }}
+              >
+                <Icon icon={Lightbulb} size={20} color={c.primary} />
+                <AppText style={{ flex: 1 }}>{step.hint}</AppText>
               </View>
             )}
             {view.photo !== "none" && step.photoUri && (
@@ -278,52 +295,107 @@ export default function SessionRunner() {
                 style={{
                   width: view.photo === "large" ? "100%" : "50%",
                   aspectRatio: 4 / 3,
-                  borderRadius: theme.radius,
+                  borderRadius: radius.md,
                   alignSelf: "center",
                 }}
               />
             )}
-            <Button label="Hear it again" icon="🔊" variant="quiet" onPress={() => speak(view.narration)} />
+            <Button
+              label="Hear it again"
+              icon={Volume2}
+              variant="ghost"
+              onPress={() => speak(view.narration)}
+              style={{ alignSelf: "flex-start", paddingHorizontal: 0 }}
+            />
           </Card>
 
           {ack ? (
-            <AppText accessibilityLiveRegion="polite" style={{ textAlign: "center" }}>
+            <AppText accessibilityLiveRegion="polite" muted style={{ textAlign: "center" }}>
               {ack}
             </AppText>
           ) : null}
 
-          <Button label="Done" icon="✅" big onPress={done} />
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Button label="I need help" icon="🙋" variant="secondary" onPress={needHelp} style={{ flex: 1 }} />
-            <Button label="Take a break" icon="🌿" variant="secondary" onPress={takeBreak} style={{ flex: 1 }} />
+          <View style={{ gap: space.md }}>
+            <Button label="Done" icon={Check} size="lg" onPress={done} />
+            <View style={{ flexDirection: "row", gap: space.md }}>
+              <Button label="I need help" icon={Hand} variant="secondary" onPress={needHelp} style={{ flex: 1 }} />
+              <Button label="Take a break" icon={Coffee} variant="secondary" onPress={takeBreak} style={{ flex: 1 }} />
+            </View>
           </View>
 
           {/* Choice board for kids who'd rather point than talk. */}
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {CHOICES.map((ch) => (
-              <Pressable
-                key={ch.value}
-                accessibilityRole="button"
-                accessibilityLabel={`Choice: ${ch.label}`}
-                onPress={() => choose(ch)}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  minHeight: 72,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: theme.radius,
-                  borderWidth: theme.borderWidth,
-                  borderColor: c.border,
-                  backgroundColor: pressed ? c.primarySoft : c.surface,
-                })}
-              >
-                <Text style={{ fontSize: 28 }}>{ch.emoji}</Text>
-                <AppText variant="caption">{ch.label}</AppText>
-              </Pressable>
-            ))}
+          <View style={{ gap: space.sm }}>
+            <AppText variant="overline" muted style={{ paddingHorizontal: space.xs }}>
+              Or point to answer
+            </AppText>
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              {CHOICES.map((ch) => (
+                <Pressable
+                  key={ch.value}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choice: ${ch.label}`}
+                  onPress={() => choose(ch)}
+                  style={({ pressed }) => [
+                    {
+                      flex: 1,
+                      minHeight: 72,
+                      gap: space.xs,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: radius.md,
+                      backgroundColor: pressed ? c.surfaceSunken : c.surface,
+                    },
+                    theme.elevation.card,
+                  ]}
+                >
+                  <Icon icon={ch.icon} size={22} color={c.primary} />
+                  <AppText variant="caption">{ch.label}</AppText>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </>
       )}
     </Screen>
+  );
+}
+
+/** Full-screen moment (break, finished): big icon, title, one line. */
+function Moment({
+  icon,
+  title,
+  body,
+  tone = "brand",
+}: {
+  icon: LucideIcon;
+  title: string;
+  body: string;
+  tone?: "brand" | "neutral";
+}) {
+  const theme = useAppTheme();
+  const c = theme.colors;
+  return (
+    <View style={{ alignItems: "center", gap: space.lg, paddingVertical: space.xl }}>
+      <View
+        style={{
+          width: 96,
+          height: 96,
+          borderRadius: 48,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: tone === "brand" ? c.primary : c.primarySoft,
+        }}
+      >
+        <Icon icon={icon} size={44} color={tone === "brand" ? c.onPrimary : c.primary} />
+      </View>
+      <View style={{ alignItems: "center", gap: space.sm }}>
+        <AppText variant="display" style={{ textAlign: "center" }}>
+          {title}
+        </AppText>
+        <AppText muted style={{ textAlign: "center" }}>
+          {body}
+        </AppText>
+      </View>
+    </View>
   );
 }

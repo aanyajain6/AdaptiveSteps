@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
+import { Layers, Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { AppText, Button, Card, Screen } from "../../../components/ui";
+import { AppText, Button, ListGroup, ListRow, Screen, Section } from "../../../components/ui";
 import * as db from "../../../lib/db";
 import { CARD_TIER_LABELS } from "../../../lib/tiers";
 import { nowIso } from "../../../lib/time";
@@ -10,7 +11,7 @@ import { ReviewCard } from "../../../types/models";
 function dueLabel(dueAt: string, now: string): string {
   if (dueAt <= now) return "Due now";
   const days = Math.ceil((Date.parse(dueAt) - Date.parse(now)) / (24 * 60 * 60 * 1000));
-  return days === 1 ? "Due tomorrow" : `Due in ${days} days`;
+  return days === 1 ? "Tomorrow" : `In ${days} days`;
 }
 
 export default function CardsList() {
@@ -39,28 +40,30 @@ export default function CardsList() {
   return (
     <Screen>
       <AppText muted>
-        Review cards for {activeChild.name}. Each card comes back on its own schedule — sooner when
-        it was tricky, later when it was easy.
+        Each card returns on its own schedule: sooner when it was tricky, later when it was easy.
       </AppText>
 
-      {cards.map((card) => (
-        <Card key={card.id}>
-          <AppText variant="heading">{card.front || "(photo card)"}</AppText>
-          <AppText variant="caption" muted>
-            {card.subject ? `${card.subject} · ` : ""}
-            {CARD_TIER_LABELS[card.supportTier]} · {dueLabel(card.dueAt, now)}
-          </AppText>
-          <Button
-            label="Edit"
-            variant="secondary"
-            onPress={() => router.push({ pathname: "/parent/cards/[id]", params: { id: card.id } })}
-          />
-        </Card>
-      ))}
+      {cards.length > 0 && (
+        <Section title={`${activeChild.name}'s cards`}>
+          <ListGroup>
+            {cards.map((card) => (
+              <ListRow
+                key={card.id}
+                icon={Layers}
+                title={card.front || "Photo card"}
+                subtitle={`${card.subject ? `${card.subject} · ` : ""}${CARD_TIER_LABELS[card.supportTier]}`}
+                trailing={dueLabel(card.dueAt, now)}
+                accessibilityHint="Edit this card"
+                onPress={() => router.push({ pathname: "/parent/cards/[id]", params: { id: card.id } })}
+              />
+            ))}
+          </ListGroup>
+        </Section>
+      )}
 
       <Button
         label="New card"
-        icon="＋"
+        icon={Plus}
         onPress={() => router.push({ pathname: "/parent/cards/[id]", params: { id: "new" } })}
       />
     </Screen>

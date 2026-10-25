@@ -32,7 +32,9 @@
           "microphonePermission": false
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-font",
+      "expo-splash-screen"
     ]
   }
 }

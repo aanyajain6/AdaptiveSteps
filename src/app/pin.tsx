@@ -4,7 +4,9 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { AppText, Screen } from "../components/ui";
+import { Delete, LockKeyhole } from "lucide-react-native";
+import { AppText, Icon, IconTile, Screen } from "../components/ui";
+import { radius, space } from "../theme/theme";
 import * as db from "../lib/db";
 import { useApp } from "../state/AppProvider";
 
@@ -57,7 +59,7 @@ export default function PinScreen() {
         enterParentMode();
       } else {
         setMode("create");
-        setMessage("Those didn't match. Let's start again.");
+        setMessage("Those PINs didn't match. Try again.");
       }
     } else if (mode === "enter") {
       if (pin === savedPin) {
@@ -67,10 +69,10 @@ export default function PinScreen() {
         if (next >= MAX_TRIES) {
           setLocked(true);
           setTries(0);
-          setMessage("Too many tries. Please wait 30 seconds.");
+          setMessage("Too many tries. Try again in 30 seconds.");
         } else {
           setTries(next);
-          setMessage("That PIN isn't right.");
+          setMessage("Incorrect PIN.");
         }
       }
     }
@@ -85,50 +87,60 @@ export default function PinScreen() {
   }
 
   const prompt =
+    mode === "create" ? "Create a parent PIN" : mode === "confirm" ? "Confirm your PIN" : "Enter parent PIN";
+  const subtitle =
     mode === "create"
-      ? "Create a 4-digit parent PIN"
+      ? "Four digits. Keeps settings and progress reports with grown-ups."
       : mode === "confirm"
-        ? "Enter the same PIN again"
-        : "Enter parent PIN";
+        ? "Enter the same four digits again."
+        : "Parent Mode is for parents and teachers.";
 
   if (mode === "loading") return <Screen>{null}</Screen>;
 
-  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
   const c = theme.colors;
 
   return (
-    <Screen style={{ alignItems: "center", justifyContent: "center" }}>
-      <AppText variant="heading" style={{ textAlign: "center" }}>
-        {prompt}
-      </AppText>
-      {mode === "create" && (
-        <AppText muted variant="caption" style={{ textAlign: "center" }}>
-          This keeps settings and progress reports in grown-up hands.
-        </AppText>
-      )}
-
-      <View
-        style={styles.dots}
-        accessible
-        accessibilityLabel={`${entry.length} of ${PIN_LENGTH} digits entered`}
-      >
-        {Array.from({ length: PIN_LENGTH }, (_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              { borderColor: c.text, backgroundColor: i < entry.length ? c.text : "transparent" },
-            ]}
-          />
-        ))}
+    <Screen style={{ alignItems: "center", justifyContent: "center", gap: space.xl }}>
+      <View style={{ alignItems: "center", gap: space.md }}>
+        <IconTile icon={LockKeyhole} size={52} />
+        <View style={{ alignItems: "center", gap: space.xs }}>
+          <AppText variant="title" style={{ textAlign: "center" }}>
+            {prompt}
+          </AppText>
+          <AppText muted variant="caption" style={{ textAlign: "center" }}>
+            {subtitle}
+          </AppText>
+        </View>
       </View>
 
-      <AppText
-        accessibilityLiveRegion="polite"
-        style={{ color: c.danger, minHeight: theme.font(24), textAlign: "center" }}
-      >
-        {message}
-      </AppText>
+      <View style={{ alignItems: "center", gap: space.sm }}>
+        <View
+          style={styles.dots}
+          accessible
+          accessibilityLabel={`${entry.length} of ${PIN_LENGTH} digits entered`}
+        >
+          {Array.from({ length: PIN_LENGTH }, (_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                {
+                  borderColor: i < entry.length ? c.primary : c.borderStrong,
+                  backgroundColor: i < entry.length ? c.primary : "transparent",
+                },
+              ]}
+            />
+          ))}
+        </View>
+        <AppText
+          accessibilityLiveRegion="polite"
+          variant="caption"
+          style={{ color: c.danger, minHeight: theme.font(18), textAlign: "center" }}
+        >
+          {message}
+        </AppText>
+      </View>
 
       <View style={styles.pad}>
         {keys.map((k, i) =>
@@ -138,18 +150,20 @@ export default function PinScreen() {
             <Pressable
               key={i}
               accessibilityRole="button"
-              accessibilityLabel={k === "⌫" ? "Delete" : k}
-              onPress={() => (k === "⌫" ? setEntry((e) => e.slice(0, -1)) : press(k))}
+              accessibilityLabel={k === "del" ? "Delete" : k}
+              onPress={() => (k === "del" ? setEntry((e) => e.slice(0, -1)) : press(k))}
               style={({ pressed }) => [
                 styles.key,
-                {
-                  backgroundColor: pressed ? c.primarySoft : c.surface,
-                  borderColor: c.border,
-                  borderWidth: theme.borderWidth,
-                },
+                k === "del"
+                  ? { backgroundColor: pressed ? c.surfaceSunken : "transparent" }
+                  : [{ backgroundColor: pressed ? c.surfaceSunken : c.surface }, theme.elevation.card],
               ]}
             >
-              <Text style={{ fontSize: theme.font(26), color: c.text, fontWeight: "600" }}>{k}</Text>
+              {k === "del" ? (
+                <Icon icon={Delete} size={24} color={c.textMuted} />
+              ) : (
+                <Text style={[theme.type("title"), { fontSize: theme.font(24), color: c.text, letterSpacing: 0 }]}>{k}</Text>
+              )}
             </Pressable>
           )
         )}
@@ -159,8 +173,8 @@ export default function PinScreen() {
 }
 
 const styles = StyleSheet.create({
-  dots: { flexDirection: "row", gap: 18, marginVertical: 12 },
-  dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2 },
-  pad: { flexDirection: "row", flexWrap: "wrap", width: 288, gap: 12, justifyContent: "center" },
-  key: { width: 84, height: 72, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  dots: { flexDirection: "row", gap: 16 },
+  dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
+  pad: { flexDirection: "row", flexWrap: "wrap", width: 276, gap: 12, justifyContent: "center" },
+  key: { width: 84, height: 64, borderRadius: radius.lg, alignItems: "center", justifyContent: "center" },
 });

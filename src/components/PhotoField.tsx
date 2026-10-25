@@ -1,9 +1,10 @@
 import { Image } from "expo-image";
+import { Camera, ImagePlus, X } from "lucide-react-native";
 import { useState } from "react";
 import { View } from "react-native";
 import { pickPhoto } from "../lib/photos";
+import { radius, space } from "../theme/theme";
 import { AppText, Button } from "./ui";
-import { useAppTheme } from "../state/AppProvider";
 
 /** Add / replace / remove a photo. `onChange(undefined)` means removed. */
 export function PhotoField({
@@ -15,7 +16,6 @@ export function PhotoField({
   uri?: string;
   onChange: (uri: string | undefined) => void;
 }) {
-  const theme = useAppTheme();
   const [busy, setBusy] = useState(false);
 
   async function choose(source: "library" | "camera") {
@@ -29,7 +29,7 @@ export function PhotoField({
   }
 
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: space.sm }}>
       <AppText variant="caption" muted>
         {label}
       </AppText>
@@ -37,14 +37,14 @@ export function PhotoField({
         <Image
           source={{ uri }}
           accessibilityLabel={`${label} preview`}
-          style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: theme.radius }}
+          style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: radius.md }}
           contentFit="cover"
         />
       ) : null}
-      <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-        <Button label={uri ? "Change photo" : "Choose photo"} icon="🖼" variant="secondary" disabled={busy} onPress={() => choose("library")} style={{ flexGrow: 1 }} />
-        <Button label="Camera" icon="📷" variant="secondary" disabled={busy} onPress={() => choose("camera")} style={{ flexGrow: 1 }} />
-        {uri ? <Button label="Remove photo" variant="quiet" onPress={() => onChange(undefined)} /> : null}
+      <View style={{ flexDirection: "row", gap: space.sm, flexWrap: "wrap" }}>
+        <Button label={uri ? "Replace" : "Choose photo"} icon={ImagePlus} variant="secondary" disabled={busy} onPress={() => choose("library")} style={{ flexGrow: 1 }} />
+        <Button label="Camera" icon={Camera} variant="secondary" disabled={busy} onPress={() => choose("camera")} style={{ flexGrow: 1 }} />
+        {uri ? <Button label="Remove photo" icon={X} variant="ghost" onPress={() => onChange(undefined)} /> : null}
       </View>
     </View>
   );

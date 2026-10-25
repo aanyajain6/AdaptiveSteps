@@ -69,7 +69,7 @@ export function decideStepTier(
       nextTier: clampTier(currentTier + 1),
       changed: true,
       direction: "escalate",
-      reason: `Needed help on this step ${ESCALATE_AFTER} times in a row -- adding a more detailed prompt.`,
+      reason: `Needed help on this step ${ESCALATE_AFTER} times in a row — adding a more detailed prompt.`,
       requiresParentApproval: false,
     };
   }
@@ -84,7 +84,7 @@ export function decideStepTier(
       nextTier: clampTier(currentTier - 1),
       changed: true,
       direction: "fade",
-      reason: `Completed this step independently ${FADE_AFTER} times in a row -- offering to reduce support.`,
+      reason: `Completed this step independently ${FADE_AFTER} times in a row — offering to reduce support.`,
       requiresParentApproval: true,
     };
   }
@@ -93,7 +93,7 @@ export function decideStepTier(
     nextTier: currentTier,
     changed: false,
     direction: "none",
-    reason: "No change -- not enough of a pattern yet.",
+    reason: "No change — not enough of a pattern yet.",
     requiresParentApproval: false,
   };
 }
@@ -134,8 +134,8 @@ export function decideReviewCard(
       nextCorrectStreak: 0,
       nextStruggleStreak: struggleStreak,
       reason: escalate
-        ? `Missed this card ${CARD_ESCALATE_AFTER} times in a row -- adding more support and reviewing it sooner.`
-        : "Missed this card -- reviewing it sooner.",
+        ? `Missed this card ${CARD_ESCALATE_AFTER} times in a row — adding more support and reviewing it sooner.`
+        : "Missed this card — reviewing it sooner.",
       requiresParentApproval: false,
     };
   }
@@ -148,7 +148,7 @@ export function decideReviewCard(
       nextIntervalDays: intervalDays, // only one adjustment per attempt
       nextCorrectStreak: 0,
       nextStruggleStreak: 0,
-      reason: `Answered correctly ${CARD_FADE_AFTER} times in a row with support -- reducing support before spacing it out further.`,
+      reason: `Answered correctly ${CARD_FADE_AFTER} times in a row with support — reducing support before spacing it out further.`,
       requiresParentApproval: true,
     };
   }
@@ -161,7 +161,7 @@ export function decideReviewCard(
     ),
     nextCorrectStreak: correctStreak,
     nextStruggleStreak: 0,
-    reason: "Answered correctly -- spacing this card out further.",
+    reason: "Answered correctly — spacing this card out further.",
     requiresParentApproval: false,
   };
 }

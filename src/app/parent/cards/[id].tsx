@@ -2,9 +2,10 @@
 // schedule and support level; it's the same skill, worded better.
 
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { Trash2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { PhotoField } from "../../../components/PhotoField";
-import { AppText, Button, Card, Field, Screen } from "../../../components/ui";
+import { AppText, Badge, Button, Card, Field, Screen } from "../../../components/ui";
 import { confirm } from "../../../lib/confirm";
 import * as db from "../../../lib/db";
 import { deletePhoto } from "../../../lib/photos";
@@ -102,18 +103,14 @@ export default function EditCard() {
           multiline
         />
       </Card>
-      {existing && (
-        <AppText variant="caption" muted>
-          Current support: {CARD_TIER_LABELS[existing.supportTier]}
-        </AppText>
-      )}
+      {existing && <Badge label={`Current support: ${CARD_TIER_LABELS[existing.supportTier]}`} tone="neutral" />}
       {error ? (
         <AppText accessibilityLiveRegion="polite" style={{ color: theme.colors.danger }}>
           {error}
         </AppText>
       ) : null}
-      <Button label={isNew ? "Create card" : "Save card"} onPress={save} />
-      {existing && <Button label="Delete card" variant="quiet" onPress={remove} />}
+      <Button label={isNew ? "Create card" : "Save card"} size="lg" onPress={save} />
+      {existing && <Button label="Delete card" icon={Trash2} variant="danger" onPress={remove} />}
     </Screen>
   );
 }

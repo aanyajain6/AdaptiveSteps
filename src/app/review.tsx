@@ -7,25 +7,28 @@
 
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import type { LucideIcon } from "lucide-react-native";
+import { Check, Eye, House, Lightbulb, Sparkles, Sprout, Volume2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
-import { AppText, Button, Card, Screen } from "../components/ui";
+import { View } from "react-native";
+import { AppText, Button, Card, Icon, Screen } from "../components/ui";
 import { recordReview } from "../lib/adaptation";
 import * as db from "../lib/db";
 import { presentCard } from "../lib/presentation";
 import { speak, stopSpeaking } from "../lib/speech";
 import { nowIso } from "../lib/time";
 import { useApp } from "../state/AppProvider";
+import { radius, space } from "../theme/theme";
 import { CardOutcome, ReviewCard } from "../types/models";
 
 // Short sessions: retrieval practice works in small doses, and it's
 // better to stop while it still feels good.
 const MAX_CARDS_PER_SESSION = 10;
 
-const OUTCOMES: { value: CardOutcome; label: string; icon: string }[] = [
-  { value: "correct", label: "I knew it!", icon: "✅" },
-  { value: "needed_support", label: "I needed a hint", icon: "💡" },
-  { value: "incorrect", label: "Not yet", icon: "🌱" },
+const OUTCOMES: { value: CardOutcome; label: string; icon: LucideIcon }[] = [
+  { value: "correct", label: "I knew it!", icon: Check },
+  { value: "needed_support", label: "I needed a hint", icon: Lightbulb },
+  { value: "incorrect", label: "Not yet", icon: Sprout },
 ];
 
 export default function Review() {
@@ -74,16 +77,32 @@ export default function Review() {
 
   if (cards.length === 0 || index >= cards.length) {
     const practiced = index;
+    const c = theme.colors;
     return (
-      <Screen style={{ justifyContent: "center", alignItems: "center" }}>
-        <Text style={{ fontSize: 88 }}>🌟</Text>
-        <AppText variant="title" style={{ textAlign: "center" }}>
-          {practiced > 0 ? `You practiced ${practiced} ${practiced === 1 ? "card" : "cards"}!` : "All caught up!"}
-        </AppText>
-        <AppText muted style={{ textAlign: "center" }}>
-          {practiced > 0 ? "Great practicing." : "No cards to practice right now. Check back later."}
-        </AppText>
-        <Button label="Back home" big onPress={() => router.dismissTo("/")} style={{ alignSelf: "stretch" }} />
+      <Screen style={{ justifyContent: "center" }}>
+        <View style={{ alignItems: "center", gap: space.lg, paddingVertical: space.xl }}>
+          <View
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: 48,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: practiced > 0 ? c.primary : c.primarySoft,
+            }}
+          >
+            <Icon icon={practiced > 0 ? Sparkles : Check} size={44} color={practiced > 0 ? c.onPrimary : c.primary} />
+          </View>
+          <View style={{ alignItems: "center", gap: space.sm }}>
+            <AppText variant="display" style={{ textAlign: "center" }}>
+              {practiced > 0 ? `You practiced ${practiced} ${practiced === 1 ? "card" : "cards"}!` : "All caught up!"}
+            </AppText>
+            <AppText muted style={{ textAlign: "center" }}>
+              {practiced > 0 ? "Practice like this is how things stick." : "No cards are due right now. Check back later."}
+            </AppText>
+          </View>
+        </View>
+        <Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />
       </Screen>
     );
   }
@@ -91,16 +110,29 @@ export default function Review() {
   if (!card || !view) return null;
   const answerVisible = revealed || view.answerShownWithPrompt;
   const hintVisible = !answerVisible && (view.hintShown || hintRequested);
+  const c = theme.colors;
 
   return (
     <Screen>
-      <AppText variant="caption" muted accessibilityLabel={`Card ${index + 1} of ${cards.length}`}>
-        Card {index + 1} of {cards.length}
-      </AppText>
+      <View accessible accessibilityLabel={`Card ${index + 1} of ${cards.length}`} style={{ gap: space.sm }}>
+        <AppText variant="overline" muted>
+          Card {index + 1} of {cards.length}
+        </AppText>
+        <View style={{ height: 6, borderRadius: radius.pill, backgroundColor: c.borderStrong }}>
+          <View
+            style={{
+              width: `${(index / cards.length) * 100}%`,
+              height: 6,
+              borderRadius: radius.pill,
+              backgroundColor: c.primary,
+            }}
+          />
+        </View>
+      </View>
 
-      <Card style={{ alignItems: "center", gap: 16, paddingVertical: 28 }}>
+      <Card raised style={{ alignItems: "center", gap: space.lg, paddingVertical: space.xxl, paddingHorizontal: space.xl }}>
         {card.subject ? (
-          <AppText variant="caption" muted>
+          <AppText variant="overline" muted>
             {card.subject}
           </AppText>
         ) : null}
@@ -109,63 +141,73 @@ export default function Review() {
             source={{ uri: card.frontPhotoUri }}
             accessibilityLabel={card.front ? `Picture for: ${card.front}` : "Question picture"}
             contentFit="contain"
-            style={{ width: "80%", aspectRatio: 4 / 3, borderRadius: theme.radius }}
+            style={{ width: "80%", aspectRatio: 4 / 3, borderRadius: radius.md }}
           />
         )}
         {card.front ? (
-          <AppText variant="title" style={{ textAlign: "center" }}>
+          <AppText variant="display" style={{ textAlign: "center", fontSize: theme.font(34), lineHeight: theme.font(40) }}>
             {card.front}
           </AppText>
         ) : null}
 
         {hintVisible && (
-          <AppText style={{ fontSize: theme.font(22) }} accessibilityLabel={`Hint: starts with ${view.hint[0]}`}>
-            💡 {view.hint}
-          </AppText>
+          <View
+            accessible
+            accessibilityLabel={`Hint: starts with ${view.hint[0]}`}
+            style={{ flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill, backgroundColor: c.primarySoft }}
+          >
+            <Icon icon={Lightbulb} size={18} color={c.primary} />
+            <AppText variant="heading" style={{ color: c.primary }}>
+              {view.hint}
+            </AppText>
+          </View>
         )}
 
         {answerVisible && (
           <View
             accessibilityLiveRegion="polite"
-            style={{
-              alignSelf: "stretch",
-              padding: 16,
-              borderRadius: theme.radius,
-              backgroundColor: theme.colors.primarySoft,
-            }}
+            style={{ alignSelf: "stretch", padding: space.lg, borderRadius: radius.md, backgroundColor: c.primarySoft }}
           >
-            <AppText variant="title" style={{ textAlign: "center" }}>
+            <AppText variant="display" style={{ textAlign: "center", color: c.primary }}>
               {card.back}
             </AppText>
           </View>
         )}
         <Button
           label="Hear it again"
-          icon="🔊"
-          variant="quiet"
+          icon={Volume2}
+          variant="ghost"
           onPress={() => speak(answerVisible ? [card.front, card.back] : card.front)}
         />
       </Card>
 
-      {!answerVisible ? (
-        <>
-          <Button label="Show answer" big onPress={reveal} />
-          {view.hintOffered && !hintRequested && (
-            <Button label="Show a hint" icon="💡" variant="secondary" onPress={() => setHintRequested(true)} />
-          )}
-        </>
-      ) : (
-        OUTCOMES.map((o) => (
-          <Button
-            key={o.value}
-            label={o.label}
-            icon={o.icon}
-            variant={o.value === "correct" ? "primary" : "secondary"}
-            disabled={saving}
-            onPress={() => mark(o.value)}
-          />
-        ))
-      )}
+      <View style={{ gap: space.md }}>
+        {!answerVisible ? (
+          <>
+            <Button label="Show answer" icon={Eye} size="lg" onPress={reveal} />
+            {view.hintOffered && !hintRequested && (
+              <Button label="Show a hint" icon={Lightbulb} variant="secondary" onPress={() => setHintRequested(true)} />
+            )}
+          </>
+        ) : (
+          <>
+            <AppText variant="overline" muted style={{ textAlign: "center" }}>
+              How did it go?
+            </AppText>
+            {OUTCOMES.map((o) => (
+              <Button
+                key={o.value}
+                label={o.label}
+                icon={o.icon}
+                size={o.value === "correct" ? "lg" : "md"}
+                variant={o.value === "correct" ? "primary" : "secondary"}
+                disabled={saving}
+                onPress={() => mark(o.value)}
+              />
+            ))}
+          </>
+        )}
+      </View>
     </Screen>
   );
 }

@@ -3,8 +3,9 @@
 // "level". Support is decided per step from how the child does.
 
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { AudioLines, Image as ImageIcon, Trash2, Type } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { AppText, Button, Card, Field, OptionGroup, Screen } from "../../../components/ui";
+import { AppText, Button, Card, Field, OptionGroup, Screen, Section } from "../../../components/ui";
 import { PresentationFields, PresentationValues } from "../../../components/PresentationFields";
 import { confirm } from "../../../lib/confirm";
 import * as db from "../../../lib/db";
@@ -20,10 +21,10 @@ const AGE_BANDS: { value: AgeBand; label: string }[] = [
   { value: "13+", label: "13+" },
 ];
 
-const FORMATS: { value: PreferredFormat; label: string }[] = [
-  { value: "picture", label: "🖼  Pictures" },
-  { value: "text", label: "🔤  Text" },
-  { value: "voice", label: "🔊  Voice" },
+const FORMATS = [
+  { value: "picture" as const, label: "Pictures", icon: ImageIcon },
+  { value: "text" as const, label: "Text", icon: Type },
+  { value: "voice" as const, label: "Voice", icon: AudioLines },
 ];
 
 const DEFAULT_PRESENTATION: PresentationValues = {
@@ -102,34 +103,37 @@ export default function EditChild() {
     <Screen>
       <Stack.Screen options={{ title: isNew ? "New profile" : `Edit ${existing?.name ?? "profile"}` }} />
 
-      <Card>
-        <Field
-          label="Name"
-          value={name}
-          onChangeText={(t) => {
-            setName(t);
-            setError("");
-          }}
-          placeholder="First name or nickname"
-          autoCapitalize="words"
-          maxLength={40}
-        />
-        {error ? (
-          <AppText accessibilityLiveRegion="polite" variant="caption" style={{ color: theme.colors.danger }}>
-            {error}
-          </AppText>
-        ) : null}
-        <OptionGroup label="Age" options={AGE_BANDS} value={ageBand} onChange={setAgeBand} />
-        <OptionGroup label="Learns best with" options={FORMATS} value={format} onChange={setFormat} />
-      </Card>
+      <Section title="About">
+        <Card>
+          <Field
+            label="Name"
+            value={name}
+            onChangeText={(t) => {
+              setName(t);
+              setError("");
+            }}
+            placeholder="First name or nickname"
+            autoCapitalize="words"
+            maxLength={40}
+          />
+          {error ? (
+            <AppText accessibilityLiveRegion="polite" variant="caption" style={{ color: theme.colors.danger }}>
+              {error}
+            </AppText>
+          ) : null}
+          <OptionGroup label="Age" options={AGE_BANDS} value={ageBand} onChange={setAgeBand} />
+          <OptionGroup label="Learns best with" options={FORMATS} value={format} onChange={setFormat} />
+        </Card>
+      </Section>
 
-      <Card>
-        <AppText variant="heading">How things look</AppText>
-        <PresentationFields value={presentation} onChange={setPresentation} />
-      </Card>
+      <Section title="Display">
+        <Card>
+          <PresentationFields value={presentation} onChange={setPresentation} />
+        </Card>
+      </Section>
 
-      <Button label={isNew ? "Create profile" : "Save changes"} onPress={save} />
-      {existing && <Button label="Delete profile" variant="quiet" onPress={remove} />}
+      <Button label={isNew ? "Create profile" : "Save changes"} size="lg" onPress={save} />
+      {existing && <Button label="Delete profile" icon={Trash2} variant="danger" onPress={remove} />}
     </Screen>
   );
 }

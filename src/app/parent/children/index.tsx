@@ -1,10 +1,14 @@
 import { router, useFocusEffect } from "expo-router";
+import { Check, Pencil, Plus, UserRound } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { AppText, Button, Card, Screen } from "../../../components/ui";
+import { AppText, Badge, Button, Card, IconTile, Screen } from "../../../components/ui";
 import * as db from "../../../lib/db";
 import { useApp } from "../../../state/AppProvider";
+import { space } from "../../../theme/theme";
 import { ChildProfile } from "../../../types/models";
+
+const FORMAT_LABEL = { picture: "Pictures", text: "Text", voice: "Voice" } as const;
 
 export default function ChildrenList() {
   const { activeChild, setActiveChild } = useApp();
@@ -19,27 +23,27 @@ export default function ChildrenList() {
   return (
     <Screen>
       {children.length === 0 && (
-        <AppText muted>No profiles yet. Add one to start using Child Mode.</AppText>
+        <AppText muted>Add a profile for each learner. Child Mode shows one profile at a time.</AppText>
       )}
 
       {children.map((child) => {
         const isActive = child.id === activeChild?.id;
         return (
-          <Card key={child.id}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <AppText variant="heading">{child.name}</AppText>
-              {isActive && (
+          <Card key={child.id} raised={isActive}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+              <IconTile icon={UserRound} tone={isActive ? "brand" : "neutral"} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText variant="heading">{child.name}</AppText>
                 <AppText variant="caption" muted>
-                  In Child Mode
+                  Ages {child.ageBand} · Learns best with {FORMAT_LABEL[child.preferredFormat].toLowerCase()}
                 </AppText>
-              )}
+              </View>
+              {isActive && <Badge label="In Child Mode" />}
             </View>
-            <AppText variant="caption" muted>
-              Ages {child.ageBand} · prefers {child.preferredFormat}
-            </AppText>
-            <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flexDirection: "row", gap: space.sm }}>
               <Button
                 label="Edit"
+                icon={Pencil}
                 variant="secondary"
                 style={{ flex: 1 }}
                 onPress={() => router.push({ pathname: "/parent/children/[id]", params: { id: child.id } })}
@@ -47,6 +51,7 @@ export default function ChildrenList() {
               {!isActive && (
                 <Button
                   label="Use in Child Mode"
+                  icon={Check}
                   variant="secondary"
                   style={{ flex: 1 }}
                   onPress={() => setActiveChild(child.id)}
@@ -59,7 +64,7 @@ export default function ChildrenList() {
 
       <Button
         label="Add a child"
-        icon="＋"
+        icon={Plus}
         onPress={() => router.push({ pathname: "/parent/children/[id]", params: { id: "new" } })}
       />
     </Screen>
