@@ -3,8 +3,10 @@
 // ============================================================
 // Every screen builds from these so the design system and the UDL
 // settings (text size, contrast) reach everything without per-screen
-// effort. Flat by rule: hairline borders, no shadows. Touch targets
-// are at least 48pt; child-facing primary actions use the 56pt "lg" size.
+// effort. Rounded (12-20pt corners) with soft shadows from the theme's
+// elevation tokens; high contrast swaps shadows for solid borders.
+// Touch targets are at least 48pt; child-facing primary actions use
+// the 56pt "lg" size.
 
 import type { LucideIcon } from "lucide-react-native";
 import React from "react";
@@ -128,7 +130,8 @@ export function AppText({
 
 // ---------- Buttons ----------
 
-// One teal "primary" per screen; everything else is "outline", or text-only "ghost"/"danger".
+// One coral "primary" per screen; everything else is "outline" (a white
+// raised button), or text-only "ghost"/"danger".
 type ButtonVariant = "primary" | "outline" | "ghost" | "danger";
 
 export function Button({
@@ -152,8 +155,8 @@ export function Button({
 }) {
   const theme = useAppTheme();
   const c = theme.colors;
-  const fg = variant === "primary" ? c.onPrimary : variant === "danger" ? c.danger : variant === "ghost" ? c.primary : c.text;
-  const bg = variant === "primary" ? c.primary : variant === "outline" ? c.page : "transparent";
+  const fg = variant === "primary" ? c.onPrimary : variant === "danger" ? c.danger : variant === "ghost" ? c.link : c.text;
+  const bg = variant === "primary" ? c.primary : variant === "outline" ? c.surface : "transparent";
   return (
     <Pressable
       accessibilityRole="button"
@@ -170,9 +173,10 @@ export function Button({
           backgroundColor: bg,
           borderRadius: radius.md,
           opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
-          transform: pressed && !theme.reduceMotion ? [{ scale: 0.985 }] : undefined,
+          transform: pressed && !theme.reduceMotion ? [{ scale: 0.97 }] : undefined,
         },
-        variant === "outline" && { borderWidth: theme.borderWidth, borderColor: c.borderStrong },
+        variant === "primary" && !disabled && theme.elevation.primary,
+        variant === "outline" && theme.elevation.card,
         style,
       ]}
     >
@@ -184,22 +188,11 @@ export function Button({
 
 // ---------- Surfaces ----------
 
-/** Bordered region for grouped content (charts, stats). Flat: hairline border, no shadow. */
+/** Rounded white panel with a soft shadow, for grouped content (charts, stats). */
 export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const theme = useAppTheme();
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.page,
-          borderRadius: radius.sm,
-          borderWidth: theme.borderWidth,
-          borderColor: theme.colors.divider,
-        },
-        style,
-      ]}
-    >
+    <View style={[styles.card, { backgroundColor: theme.colors.surface, borderRadius: radius.lg }, theme.elevation.card, style]}>
       {children}
     </View>
   );
@@ -227,8 +220,8 @@ export function Field({ label, ...input }: { label: string } & TextInputProps) {
             color: theme.colors.text,
             backgroundColor: theme.colors.field,
             borderColor: theme.colors.borderStrong,
-            borderWidth: theme.borderWidth,
-            borderRadius: radius.md,
+            borderWidth: theme.highContrast ? 2 : 1.5,
+            borderRadius: radius.sm,
           },
           input.style,
         ]}
@@ -263,7 +256,7 @@ export function ToggleRow({
         accessibilityLabel={label}
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: theme.colors.primary, false: theme.colors.borderStrong }}
+        trackColor={{ true: theme.colors.link, false: theme.colors.borderStrong }}
       />
     </View>
   );
@@ -298,24 +291,21 @@ export function OptionGroup<T extends string>({
               accessibilityState={{ selected }}
               accessibilityLabel={`${label}: ${o.label}`}
               onPress={() => onChange(o.value)}
-              // Flat: every option outlined; the selected one takes the teal border, tint, and text.
+              // Unselected options are white raised chips; the selected one takes the coral border and tint.
               style={[
                 styles.segment,
-                {
-                  borderRadius: radius.sm,
-                  borderWidth: selected ? 2 : theme.borderWidth,
-                  borderColor: selected ? c.primary : c.borderStrong,
-                  backgroundColor: selected ? (theme.highContrast ? c.primary : c.primarySoft) : c.page,
-                },
+                { borderRadius: radius.sm, backgroundColor: selected ? (theme.highContrast ? c.primary : c.primarySoft) : c.surface },
+                theme.elevation.card,
+                selected && { borderColor: c.primary },
               ]}
             >
               {o.icon ? (
-                <Icon icon={o.icon} size={16} color={selected ? (theme.highContrast ? c.onPrimary : c.primary) : c.text} />
+                <Icon icon={o.icon} size={16} color={selected && theme.highContrast ? c.onPrimary : c.text} />
               ) : null}
               <Text
                 style={[
                   theme.type(selected ? "label" : "caption"),
-                  { fontSize: theme.font(14), color: selected ? (theme.highContrast ? c.onPrimary : c.primary) : c.text },
+                  { fontSize: theme.font(14), color: selected && theme.highContrast ? c.onPrimary : c.text },
                 ]}
               >
                 {o.label}

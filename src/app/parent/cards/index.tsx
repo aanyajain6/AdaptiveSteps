@@ -2,6 +2,7 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import { Layers, Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { PageHeader, StatusList, StatusRow } from "../../../components/structure";
+import { EmptyState } from "../../../components/EmptyState";
 import { AppText, Button, Screen } from "../../../components/ui";
 import * as db from "../../../lib/db";
 import { nowIso } from "../../../lib/time";
@@ -71,7 +72,7 @@ export default function CardsList() {
           ))}
         </StatusList>
       ) : (
-        <AppText muted>No cards yet.</AppText>
+        <EmptyState size={120} title="No cards yet" body="Add a few facts or words to practice. New cards are ready right away." />
       )}
     </Screen>
   );

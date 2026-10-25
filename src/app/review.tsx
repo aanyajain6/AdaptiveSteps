@@ -9,10 +9,11 @@
 import { Image } from "expo-image";
 import { router, Stack } from "expo-router";
 import type { LucideIcon } from "lucide-react-native";
-import { ArrowRight, Check, Eye, House, Layers, Lightbulb, Sparkles, Sprout, Volume2 } from "lucide-react-native";
+import { ArrowRight, Check, Eye, House, Layers, Lightbulb, Sprout, Volume2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, useWindowDimensions, View } from "react-native";
-import { Dropdown, PageHeader, Stepper, StepperItem } from "../components/structure";
+import { EmptyState } from "../components/EmptyState";
+import { Dropdown, PageHeader, ProgressBar, Stepper, StepperItem } from "../components/structure";
 import { AppText, Button, Icon, Screen } from "../components/ui";
 import { recordReview } from "../lib/adaptation";
 import * as db from "../lib/db";
@@ -26,7 +27,7 @@ import { CardOutcome, ReviewCard } from "../types/models";
 // Short sessions: retrieval practice works in small doses, and it's
 // better to stop while it still feels good.
 const MAX_CARDS_PER_SESSION = 10;
-/** Answers longer than this use the title size instead of display. */
+/** Answers longer than this use large reading text instead of the display face. */
 const LONG_ANSWER_CHARS = 24;
 
 type ViewMode = "all" | "current";
@@ -38,8 +39,7 @@ const OUTCOMES: { value: CardOutcome; label: string; icon: LucideIcon }[] = [
 ];
 
 export default function Review() {
-  const { activeChild, theme } = useApp();
-  const c = theme.colors;
+  const { activeChild } = useApp();
   const { width } = useWindowDimensions();
   const wide = width >= TABLET_BREAKPOINT;
 
@@ -111,20 +111,12 @@ export default function Review() {
     return (
       <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
-        <View style={{ alignItems: "center", gap: space.lg, paddingVertical: space.xl }}>
-          <View style={{ width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center", backgroundColor: c.surfaceSunken }}>
-            <Icon icon={practiced > 0 ? Sparkles : Check} size={40} color={c.text} />
-          </View>
-          <View style={{ alignItems: "center", gap: space.sm }}>
-            <AppText variant="display" style={{ textAlign: "center" }}>
-              {practiced > 0 ? `You practiced ${practiced} ${practiced === 1 ? "card" : "cards"}!` : "All caught up!"}
-            </AppText>
-            <AppText muted style={{ textAlign: "center" }}>
-              {practiced > 0 ? "Practice like this is how things stick." : "No cards are due right now. Check back later."}
-            </AppText>
-          </View>
-        </View>
-        <Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />
+        <EmptyState
+          celebrate={practiced > 0}
+          title={practiced > 0 ? `You practiced ${practiced} ${practiced === 1 ? "card" : "cards"}!` : "All caught up!"}
+          body={practiced > 0 ? "Practice like this is how things stick." : "No cards are due right now. Hop will let you know when it's time."}
+          action={<Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />}
+        />
       </Screen>
     );
   }
@@ -179,14 +171,7 @@ export default function Review() {
             />
           }
         />
-        <View
-          accessible
-          accessibilityRole="progressbar"
-          accessibilityLabel={`${answered.length} of ${total} cards done`}
-          style={{ height: 4, borderRadius: radius.pill, backgroundColor: c.divider }}
-        >
-          <View style={{ width: `${(answered.length / total) * 100}%`, height: 4, borderRadius: radius.pill, backgroundColor: c.link }} />
-        </View>
+        <ProgressBar done={answered.length} total={total} noun="cards" />
       </View>
 
       {wide ? (
@@ -256,9 +241,9 @@ function CardDetail({
         <View
           accessible
           accessibilityLabel={`Hint: starts with ${hint[0]}`}
-          style={{ flexDirection: "row", alignItems: "center", gap: space.sm, alignSelf: "flex-start", paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.sm, backgroundColor: c.surfaceSunken }}
+          style={{ flexDirection: "row", alignItems: "center", gap: space.sm, alignSelf: "flex-start", paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill, backgroundColor: c.accentSoft }}
         >
-          <Icon icon={Lightbulb} size={18} color={c.textMuted} />
+          <Icon icon={Lightbulb} size={18} color={c.text} />
           <AppText variant="heading">{hint}</AppText>
         </View>
       ) : null}
@@ -266,13 +251,14 @@ function CardDetail({
       {answerVisible ? (
         <View
           accessibilityLiveRegion="polite"
-          style={{ padding: space.lg, borderRadius: radius.sm, borderWidth: theme.borderWidth, borderColor: c.borderStrong }}
+          style={[{ padding: space.lg, gap: space.xs, borderRadius: radius.lg, backgroundColor: c.successSoft }, theme.highContrast && { borderWidth: 2, borderColor: c.border }]}
         >
           <AppText variant="overline" muted>
             Answer
           </AppText>
-          {/* Short answers ("56", "Paris") read best huge; long ones step down so they stay scannable. */}
-          <AppText variant={card.back.length > LONG_ANSWER_CHARS ? "title" : "display"}>{card.back}</AppText>
+          {/* Short answers ("56", "Paris") read best huge in the display face; sentence-length
+              ones switch to large reading text, since Fredoka is for headings, not reading. */}
+          <AppText variant={card.back.length > LONG_ANSWER_CHARS ? "lead" : "display"}>{card.back}</AppText>
         </View>
       ) : null}
 

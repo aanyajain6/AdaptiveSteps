@@ -2,6 +2,7 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import { ClipboardList, Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { PageHeader, StatusList, StatusRow } from "../../../components/structure";
+import { EmptyState } from "../../../components/EmptyState";
 import type { StatusKind } from "../../../components/structure";
 import { AppText, Button, Screen } from "../../../components/ui";
 import * as db from "../../../lib/db";
@@ -87,7 +88,7 @@ export default function SessionsList() {
           })}
         </StatusList>
       ) : (
-        <AppText muted>No sessions yet.</AppText>
+        <EmptyState size={120} title="No sessions yet" body="Break a homework routine into small, concrete steps. Hop reads each one aloud." />
       )}
     </Screen>
   );

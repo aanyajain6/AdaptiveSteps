@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ChevronUp, Table2 } from "lucide-react-native";
 import { View } from "react-native";
 import type { CartesianChartTheme } from "react-native-chart-kit/v2";
-import { fonts, space, Theme } from "../theme/theme";
+import { family, space, Theme } from "../theme/theme";
 import { AppText, Button, Card } from "./ui";
 
 export function chartTheme(theme: Theme): CartesianChartTheme {
@@ -20,7 +20,7 @@ export function chartTheme(theme: Theme): CartesianChartTheme {
     mutedText: c.textMuted,
     series: [c.chart],
     typography: {
-      fontFamily: fonts.medium,
+      fontFamily: family("semibold"),
       axisLabelSize: theme.font(12),
       legendLabelSize: theme.font(12),
     },

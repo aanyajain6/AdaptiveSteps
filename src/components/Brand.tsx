@@ -1,45 +1,30 @@
-// Brand mark + header. The mark is three ascending bars -- steps --
-// drawn with Views so it inherits the theme (including high contrast).
+// Brand lockup: Hop's face as the mark, then the two-tone Fredoka
+// wordmark (plum "Adaptive", coral "Steps"). The coral is the brand
+// color as-is: logotypes are exempt from text-contrast minimums, and
+// the screen reader gets the name from the label either way.
 
 import React from "react";
 import { Text, View } from "react-native";
 import { useAppTheme } from "../state/AppProvider";
-import { space, MAX_CONTENT_WIDTH } from "../theme/theme";
+import { family, space, MAX_CONTENT_WIDTH } from "../theme/theme";
+import { HopFace } from "./Hop";
 
-export function BrandMark({ size = 28 }: { size?: number }) {
-  const theme = useAppTheme();
-  const bar = size * 0.16;
-  return (
-    <View
-      accessible={false}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size * 0.28,
-        backgroundColor: theme.colors.primary,
-        flexDirection: "row",
-        alignItems: "flex-end",
-        justifyContent: "center",
-        gap: bar * 0.55,
-        paddingBottom: size * 0.24,
-      }}
-    >
-      {[0.28, 0.44, 0.6].map((h) => (
-        <View key={h} style={{ width: bar, height: size * h, borderRadius: bar / 2, backgroundColor: theme.colors.onPrimary }} />
-      ))}
-    </View>
-  );
+const WORDMARK_CORAL = "#FF6B4A";
+
+export function BrandMark({ size = 30 }: { size?: number }) {
+  return <HopFace size={size} />;
 }
 
-export function Wordmark() {
+export function Wordmark({ size = 22 }: { size?: number }) {
   const theme = useAppTheme();
-  const style = [theme.type("heading"), { color: theme.colors.text, letterSpacing: -0.4 }];
+  // A logo, not reading text: fixed size, so large-text settings never push the header actions off screen.
+  const style = { fontFamily: family("display"), fontSize: size, lineHeight: Math.round(size * 1.15), color: theme.colors.text };
   // Not a heading: the screen's own title is the heading. One label for the whole lockup.
   return (
     <View accessible accessibilityLabel="AdaptiveSteps" style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
       <BrandMark />
       <Text style={style}>
-        Adaptive<Text style={{ color: theme.colors.primary }}>Steps</Text>
+        Adaptive<Text style={{ color: theme.highContrast ? theme.colors.primary : WORDMARK_CORAL }}>Steps</Text>
       </Text>
     </View>
   );

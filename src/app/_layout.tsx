@@ -1,10 +1,4 @@
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
-} from "@expo-google-fonts/inter";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -17,9 +11,21 @@ import { TABLET_BREAKPOINT } from "../theme/theme";
 
 SplashScreen.preventAutoHideAsync();
 
+// Fonts ship inside the app (assets/fonts, OFL-licensed) rather than from
+// node_modules: web exports put node_modules assets under a
+// "node_modules" URL path, which some static hosts refuse to serve --
+// that was the source of the serif headers on the deployed build.
+const FONT_FILES = {
+  Fredoka_600SemiBold: require("../../assets/fonts/Fredoka_600SemiBold.ttf"),
+  Nunito_400Regular: require("../../assets/fonts/Nunito_400Regular.ttf"),
+  Nunito_600SemiBold: require("../../assets/fonts/Nunito_600SemiBold.ttf"),
+  Nunito_700Bold: require("../../assets/fonts/Nunito_700Bold.ttf"),
+  Nunito_800ExtraBold: require("../../assets/fonts/Nunito_800ExtraBold.ttf"),
+};
+
 function RootStack() {
   const { ready, parentUnlocked, theme } = useApp();
-  const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const [fontsLoaded, fontError] = useFonts(FONT_FILES);
   const fontsDone = fontsLoaded || !!fontError;
   const { width } = useWindowDimensions();
   const showRail = width >= TABLET_BREAKPOINT;

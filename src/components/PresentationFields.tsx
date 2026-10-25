@@ -39,7 +39,7 @@ export function PresentationFields({
       <View style={{ gap: 4 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <AppText variant="label">Text size</AppText>
-          <AppText variant="label" style={{ color: theme.colors.primary }}>
+          <AppText variant="label" style={{ color: theme.colors.link }}>
             {percent}%
           </AppText>
         </View>
@@ -51,9 +51,9 @@ export function PresentationFields({
           step={STEP}
           value={value.textScale}
           onValueChange={setScale}
-          minimumTrackTintColor={theme.colors.primary}
+          minimumTrackTintColor={theme.colors.link}
           maximumTrackTintColor={theme.colors.border}
-          thumbTintColor={theme.colors.primary}
+          thumbTintColor={theme.colors.link}
           style={{ height: 48 }}
         />
         {/* Buttons too: sliders are hard to operate by keyboard or with limited fine-motor control. */}

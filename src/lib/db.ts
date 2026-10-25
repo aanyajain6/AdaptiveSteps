@@ -29,6 +29,7 @@ const KEYS = {
   adjustments: "adaptivesteps:adjustments",
   parentPin: "adaptivesteps:parentPin",
   activeChildId: "adaptivesteps:activeChildId",
+  demoSeeded: "adaptivesteps:demoSeeded",
 } as const;
 
 async function readAll<T>(key: string): Promise<T[]> {
@@ -211,6 +212,15 @@ export async function getActiveChildId(): Promise<string | null> {
 export async function setActiveChildId(childId: string | null): Promise<void> {
   if (childId) await AsyncStorage.setItem(KEYS.activeChildId, childId);
   else await AsyncStorage.removeItem(KEYS.activeChildId);
+}
+
+// ---------- Demo data (public web deploy only) ----------
+export async function isDemoSeeded(): Promise<boolean> {
+  return (await AsyncStorage.getItem(KEYS.demoSeeded)) === "true";
+}
+
+export async function markDemoSeeded(): Promise<void> {
+  await AsyncStorage.setItem(KEYS.demoSeeded, "true");
 }
 
 // ---------- Dev helper ----------

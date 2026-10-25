@@ -1,10 +1,11 @@
 // ============================================================
 // Structured layout primitives
 // ============================================================
-// Information-dense, list-first building blocks: a page header with a
-// "Viewing by" filter, status list rows, and a numbered vertical
-// stepper. Deliberately flat: hairline dividers, no cards or shadows,
-// and the accent color only on links, the active step, and progress.
+// List-first building blocks: a page header with a "Viewing by"
+// filter, status rows, and a numbered vertical stepper. Playful but
+// orderly: rounded cards with soft shadows, a sky icon chip on every
+// row, and status shown as a tinted pill that always carries an icon
+// and words (never color alone).
 
 import type { LucideIcon } from "lucide-react-native";
 import {
@@ -23,7 +24,7 @@ import React, { useRef, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { STEP_STATUS_LABELS, StepStatus } from "../lib/presentation";
 import { useAppTheme } from "../state/AppProvider";
-import { MIN_TOUCH, radius, space } from "../theme/theme";
+import { MIN_TOUCH, radius, space, ThemeColors } from "../theme/theme";
 import { AppText, Icon } from "./ui";
 
 // ---------- Page header ----------
@@ -39,12 +40,11 @@ export function PageHeader({
   meta?: string;
   right?: React.ReactNode;
 }) {
-  const theme = useAppTheme();
   return (
     <View style={{ gap: space.md }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, flexShrink: 1, flexGrow: 1 }}>
-          <Icon icon={icon} size={22} color={theme.colors.text} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: space.md, flexShrink: 1, flexGrow: 1 }}>
+          <IconChip icon={icon} tone="secondary" size={40} />
           <AppText variant="title" style={{ flexShrink: 1 }}>
             {title}
           </AppText>
@@ -56,6 +56,37 @@ export function PageHeader({
           {meta}
         </AppText>
       ) : null}
+    </View>
+  );
+}
+
+/** Round colored chip holding an icon. Icons are plum on every tint (white on sky is only 2.5:1). */
+export function IconChip({
+  icon,
+  tone = "secondary",
+  size = 40,
+}: {
+  icon: LucideIcon;
+  tone?: "secondary" | "primary" | "accent" | "success";
+  size?: number;
+}) {
+  const theme = useAppTheme();
+  const c = theme.colors;
+  const bg = { secondary: c.secondarySoft, primary: c.primarySoft, accent: c.accentSoft, success: c.successSoft }[tone];
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: bg,
+        borderWidth: theme.highContrast ? 1 : 0,
+        borderColor: c.border,
+      }}
+    >
+      <Icon icon={icon} size={size * 0.48} color={c.text} />
     </View>
   );
 }
@@ -84,7 +115,7 @@ export function Dropdown<T extends string>({
 
   function openMenu() {
     // Anchor the panel directly under the control, like a native select.
-    trigger.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y: y + height + 4, width }));
+    trigger.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y: y + height + 6, width }));
   }
 
   return (
@@ -97,11 +128,8 @@ export function Dropdown<T extends string>({
         onPress={openMenu}
         style={({ pressed }) => [
           styles.dropdown,
-          {
-            borderColor: c.borderStrong,
-            borderWidth: theme.borderWidth,
-            backgroundColor: pressed ? c.surfaceSunken : c.page,
-          },
+          theme.elevation.card,
+          { backgroundColor: pressed ? c.surfaceSunken : c.surface },
         ]}
       >
         <Text style={[theme.type("caption"), { color: c.textMuted }]}>{label}:</Text>
@@ -110,22 +138,24 @@ export function Dropdown<T extends string>({
       </Pressable>
 
       <Modal visible={open} transparent animationType="none" onRequestClose={close}>
-        {/* Transparent backdrop: closes on outside tap. No scrim, no shadow -- a flat bordered panel. */}
+        {/* Transparent backdrop closes on outside tap; the panel itself carries the depth. */}
         <Pressable accessibilityLabel="Close" onPress={close} style={{ flex: 1 }}>
           <View
             accessibilityRole="menu"
-            style={{
-              position: "absolute",
-              top: anchor?.y ?? 0,
-              // Right-align with the trigger, never narrower than it, never off-screen.
-              right: Math.max(space.sm, windowWidth - (anchor ? anchor.x + anchor.width : windowWidth)),
-              minWidth: Math.max(220, anchor?.width ?? 0),
-              borderRadius: radius.sm,
-              backgroundColor: c.page,
-              borderWidth: theme.borderWidth,
-              borderColor: c.borderStrong,
-              paddingVertical: space.xs,
-            }}
+            style={[
+              {
+                position: "absolute",
+                top: anchor?.y ?? 0,
+                // Right-align with the trigger, never narrower than it, never off-screen.
+                right: Math.max(space.sm, windowWidth - (anchor ? anchor.x + anchor.width : windowWidth)),
+                minWidth: Math.max(220, anchor?.width ?? 0),
+                borderRadius: radius.md,
+                backgroundColor: c.surface,
+                paddingVertical: space.sm,
+                overflow: "hidden",
+              },
+              theme.elevation.raised,
+            ]}
           >
             <AppText variant="overline" muted style={{ paddingHorizontal: space.lg, paddingVertical: space.sm }}>
               {label}
@@ -144,15 +174,17 @@ export function Dropdown<T extends string>({
                   }}
                   style={({ pressed }) => ({
                     minHeight: MIN_TOUCH,
-                    paddingHorizontal: space.lg,
+                    marginHorizontal: space.sm,
+                    paddingHorizontal: space.md,
+                    borderRadius: radius.sm,
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    backgroundColor: pressed ? c.surfaceSunken : "transparent",
+                    backgroundColor: selected ? c.primarySoft : pressed ? c.surfaceSunken : "transparent",
                   })}
                 >
                   <AppText variant={selected ? "label" : "body"}>{o.label}</AppText>
-                  {selected ? <Icon icon={Check} size={18} color={c.link} /> : null}
+                  {selected ? <Icon icon={Check} size={18} color={c.text} /> : null}
                 </Pressable>
               );
             })}
@@ -163,7 +195,7 @@ export function Dropdown<T extends string>({
   );
 }
 
-// ---------- Status indicator ----------
+// ---------- Status pill ----------
 
 export type StatusKind =
   | StepStatus
@@ -175,46 +207,60 @@ export type StatusKind =
   | "automatic"
   | "superseded";
 
-const STATUS: Record<StatusKind, { icon: LucideIcon; label: string }> = {
-  not_started: { icon: Circle, label: STEP_STATUS_LABELS.not_started },
-  in_progress: { icon: CircleDot, label: STEP_STATUS_LABELS.in_progress },
-  needs_help: { icon: CircleQuestionMark, label: STEP_STATUS_LABELS.needs_help },
-  done: { icon: CircleCheck, label: STEP_STATUS_LABELS.done },
-  extra_support: { icon: CirclePlus, label: "Extra Support" },
-  active: { icon: CircleDot, label: "In Child Mode" },
-  approved: { icon: CircleCheck, label: "Approved" },
-  declined: { icon: CircleSlash, label: "Not yet" },
-  automatic: { icon: CircleArrowUp, label: "Automatic" },
-  superseded: { icon: CircleMinus, label: "Replaced" },
+type Tint = "neutral" | "secondary" | "accent" | "success" | "primary";
+
+const STATUS: Record<StatusKind, { icon: LucideIcon; label: string; tint: Tint }> = {
+  not_started: { icon: Circle, label: STEP_STATUS_LABELS.not_started, tint: "neutral" },
+  in_progress: { icon: CircleDot, label: STEP_STATUS_LABELS.in_progress, tint: "secondary" },
+  needs_help: { icon: CircleQuestionMark, label: STEP_STATUS_LABELS.needs_help, tint: "accent" },
+  done: { icon: CircleCheck, label: STEP_STATUS_LABELS.done, tint: "success" },
+  extra_support: { icon: CirclePlus, label: "Extra Support", tint: "accent" },
+  active: { icon: CircleDot, label: "In Child Mode", tint: "primary" },
+  approved: { icon: CircleCheck, label: "Approved", tint: "success" },
+  declined: { icon: CircleSlash, label: "Not yet", tint: "neutral" },
+  automatic: { icon: CircleArrowUp, label: "Automatic", tint: "secondary" },
+  superseded: { icon: CircleMinus, label: "Replaced", tint: "neutral" },
 };
 
-/** Outlined circle glyph + plain-language label, all in the same muted ink. */
+function tintColor(c: ThemeColors, tint: Tint): string {
+  return { neutral: c.surfaceSunken, secondary: c.secondarySoft, accent: c.accentSoft, success: c.successSoft, primary: c.primarySoft }[tint];
+}
+
+/** Tinted pill: glyph + plain-language label in plum (12:1+ on every tint). */
 export function StatusIndicator({ status }: { status: StatusKind }) {
   const theme = useAppTheme();
-  const { icon, label } = STATUS[status];
+  const { icon, label, tint } = STATUS[status];
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-      <Icon icon={icon} size={16} color={theme.colors.textMuted} />
-      <Text style={[theme.type("caption"), { color: theme.colors.textMuted }]}>{label}</Text>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: radius.pill,
+        backgroundColor: tintColor(theme.colors, tint),
+        borderWidth: theme.highContrast ? 1 : 0,
+        borderColor: theme.colors.border,
+      }}
+    >
+      <Icon icon={icon} size={14} color={theme.colors.text} />
+      <Text style={[theme.type("overline"), { textTransform: "none", letterSpacing: 0, color: theme.colors.text }]}>{label}</Text>
     </View>
   );
 }
 
 // ---------- Status list ----------
 
-/** Plain list with hairline dividers. No card, no shadow. */
+/**
+ * Above this text scale, a row's status pill moves under its title
+ * instead of beside it, so large text never truncates the title.
+ */
+const STACK_STATUS_ABOVE_SCALE = 1.25;
+
+/** A stack of status-row cards. */
 export function StatusList({ children }: { children: React.ReactNode }) {
-  const theme = useAppTheme();
-  const items = React.Children.toArray(children).filter(Boolean);
-  return (
-    <View style={{ borderTopWidth: hairline(theme.highContrast), borderBottomWidth: hairline(theme.highContrast), borderColor: theme.colors.divider }}>
-      {items.map((child, i) => (
-        <View key={i} style={i > 0 ? { borderTopWidth: hairline(theme.highContrast), borderTopColor: theme.colors.divider } : undefined}>
-          {child}
-        </View>
-      ))}
-    </View>
-  );
+  return <View style={{ gap: 10 }}>{children}</View>;
 }
 
 export function StatusRow({
@@ -241,6 +287,8 @@ export function StatusRow({
 }) {
   const theme = useAppTheme();
   const c = theme.colors;
+  const stack = theme.textScale > STACK_STATUS_ABOVE_SCALE;
+  const pill = status ? <StatusIndicator status={status} /> : null;
   return (
     <Pressable
       disabled={!onPress}
@@ -248,23 +296,31 @@ export function StatusRow({
       accessibilityLabel={[title, meta, detail, status ? STATUS[status].label : trailing].filter(Boolean).join(", ")}
       accessibilityHint={accessibilityHint}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, { backgroundColor: pressed ? c.surfaceSunken : "transparent" }]}
+      style={({ pressed }) => [
+        styles.row,
+        theme.elevation.card,
+        {
+          backgroundColor: pressed ? c.surfaceSunken : c.surface,
+          transform: pressed && !theme.reduceMotion ? [{ scale: 0.99 }] : undefined,
+        },
+      ]}
     >
-      <Icon icon={icon} size={18} color={c.textMuted} />
+      <IconChip icon={icon} />
       <View style={{ flex: 1, gap: 2 }}>
-        <AppText variant="label" style={{ color: onPress ? c.link : c.text }} numberOfLines={2}>
+        <AppText variant="label" numberOfLines={stack ? undefined : 2}>
           {title}
         </AppText>
         {meta ? (
-          <AppText variant="caption" muted numberOfLines={1}>
+          <AppText variant="caption" muted numberOfLines={stack ? undefined : 1}>
             {meta}
           </AppText>
         ) : null}
         {detail ? <AppText variant="caption">{detail}</AppText> : null}
+        {stack && pill ? <View style={{ alignSelf: "flex-start", marginTop: space.xs }}>{pill}</View> : null}
       </View>
-      {status ? <StatusIndicator status={status} /> : null}
+      {!stack ? pill : null}
       {!status && trailing ? (
-        <AppText variant="caption" muted>
+        <AppText variant="label" muted>
           {trailing}
         </AppText>
       ) : null}
@@ -284,15 +340,20 @@ export interface StepperItem {
   status?: StepStatus;
 }
 
+const NODE = 32;
+/** Card head height; the rail circle is centered on it. */
+const HEAD = 60;
+const ROW_GAP = 10;
+
 /**
- * Numbered circles joined by a vertical line, one row per step:
- * done = check, current = filled accent, upcoming = outlined + muted.
- * The line below a finished step fills with the accent (progress).
- * `renderExpanded` draws the active step's content under its row.
+ * Numbered circles joined by a vertical line, one card per step:
+ * done = leaf check, current = coral, upcoming = outlined + muted.
+ * The line below a finished step turns leaf green (progress). The
+ * current step's card is raised and holds `renderExpanded`.
  *
  * variant "authoring" (the builder): same sequence visual, but no
- * progress meaning -- no checks, no filled line, every title is an
- * edit link; only the step being edited is filled.
+ * progress meaning -- no checks, no green line; only the step being
+ * edited is coral.
  */
 export function Stepper({
   items,
@@ -314,6 +375,8 @@ export function Stepper({
 }) {
   const theme = useAppTheme();
   const c = theme.colors;
+  const lineTop = (HEAD - NODE) / 2;
+  const stack = theme.textScale > STACK_STATUS_ABOVE_SCALE;
 
   return (
     <View accessibilityRole="list">
@@ -323,39 +386,38 @@ export function Stepper({
         const isDone = !authoring && item.status === "done";
         const first = i === 0;
         const last = i === items.length - 1;
-        const lineAbove = !authoring && !first && items[i - 1].status === "done" ? c.link : c.divider;
-        const lineBelow = isDone ? c.link : c.divider;
+        const lineAbove = !authoring && !first && items[i - 1].status === "done" ? c.success : c.borderStrong;
+        const lineBelow = isDone ? c.success : c.borderStrong;
 
         const circle = isCurrent ? (
-          <View style={[styles.node, { backgroundColor: c.link, borderColor: c.link }]}>
-            <Text style={[theme.type("label"), { fontSize: 13, color: c.onInk }]}>{item.number}</Text>
+          <View style={[styles.node, { backgroundColor: c.primary, borderColor: c.primary }, !theme.highContrast && theme.elevation.primary]}>
+            <Text style={[theme.type("label"), { color: c.onPrimary }]}>{item.number}</Text>
           </View>
         ) : isDone ? (
-          <View style={[styles.node, { backgroundColor: c.page, borderColor: c.link }]}>
-            <Icon icon={Check} size={14} color={c.link} />
+          <View style={[styles.node, { backgroundColor: c.success, borderColor: c.success }]}>
+            <Icon icon={Check} size={16} color={c.onInk} />
           </View>
         ) : (
-          <View style={[styles.node, { backgroundColor: c.page, borderColor: c.borderStrong }]}>
-            <Text style={[theme.type("caption"), { fontSize: 13, color: c.textMuted }]}>{item.number}</Text>
+          <View style={[styles.node, { backgroundColor: c.surface, borderColor: c.borderStrong }]}>
+            <Text style={[theme.type("label"), { color: c.textMuted }]}>{item.number}</Text>
           </View>
         );
 
         return (
-          <View key={item.key} accessibilityRole="none" style={{ flexDirection: "row" }}>
-            {/* Rail: line in, circle, line out. */}
-            <View style={{ width: 40, alignItems: "center" }}>
-              <View style={{ width: 2, height: 14, backgroundColor: first ? "transparent" : lineAbove }} />
+          <View key={item.key} accessibilityRole="none" style={{ flexDirection: "row", paddingBottom: last ? 0 : ROW_GAP }}>
+            {/* Rail: line in, circle, line out (the out-line also spans the gap to the next card). */}
+            <View style={{ width: 44, alignItems: "center", marginBottom: last ? 0 : -ROW_GAP }}>
+              <View style={[styles.line, { height: lineTop, backgroundColor: first ? "transparent" : lineAbove }]} />
               {circle}
-              <View style={{ width: 2, flex: 1, minHeight: 14, backgroundColor: last ? "transparent" : lineBelow }} />
+              <View style={[styles.line, { flex: 1, backgroundColor: last ? "transparent" : lineBelow }]} />
             </View>
 
             <View
-              style={{
-                flex: 1,
-                paddingBottom: last ? 0 : space.sm,
-                borderBottomWidth: last ? 0 : hairline(theme.highContrast),
-                borderBottomColor: c.divider,
-              }}
+              style={[
+                { flex: 1, borderRadius: radius.md, backgroundColor: c.surface, paddingHorizontal: space.md + 2 },
+                isCurrent ? theme.elevation.raised : theme.elevation.card,
+                isCurrent && { borderColor: c.primary },
+              ]}
             >
               <Pressable
                 disabled={!onSelect || isCurrent}
@@ -370,20 +432,25 @@ export function Stepper({
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText
                     variant={isCurrent ? "heading" : "label"}
-                    style={{ color: isCurrent ? c.text : !authoring && item.status === "not_started" ? c.textMuted : c.link }}
-                    numberOfLines={isCurrent ? undefined : 2}
+                    style={{ color: !authoring && item.status === "not_started" && !isCurrent ? c.textMuted : c.text }}
+                    numberOfLines={isCurrent || stack ? undefined : 2}
                   >
                     {item.title}
                   </AppText>
                   {item.meta ? (
-                    <AppText variant="caption" muted numberOfLines={1}>
+                    <AppText variant="caption" muted numberOfLines={stack ? undefined : 1}>
                       {item.meta}
                     </AppText>
                   ) : null}
+                  {stack && item.status ? (
+                    <View style={{ alignSelf: "flex-start", marginTop: space.xs }}>
+                      <StatusIndicator status={item.status} />
+                    </View>
+                  ) : null}
                 </View>
-                {item.status ? <StatusIndicator status={item.status} /> : null}
+                {!stack && item.status ? <StatusIndicator status={item.status} /> : null}
               </Pressable>
-              {isCurrent && renderExpanded ? <View style={{ paddingBottom: space.md }}>{renderExpanded(item)}</View> : null}
+              {isCurrent && renderExpanded ? <View style={{ paddingBottom: space.lg }}>{renderExpanded(item)}</View> : null}
             </View>
           </View>
         );
@@ -392,8 +459,19 @@ export function Stepper({
   );
 }
 
-function hairline(highContrast: boolean) {
-  return highContrast ? 1 : StyleSheet.hairlineWidth;
+// ---------- Form section ----------
+
+/** A titled card grouping related form fields. */
+export function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useAppTheme();
+  return (
+    <View style={[{ gap: space.lg, padding: space.lg, borderRadius: radius.lg, backgroundColor: theme.colors.surface }, theme.elevation.card]}>
+      <AppText variant="overline" muted>
+        {title}
+      </AppText>
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -405,29 +483,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     borderRadius: radius.sm,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 64, paddingVertical: space.md, paddingHorizontal: space.xs },
-  node: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  stepHead: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 56, paddingVertical: space.sm },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 68,
+    paddingVertical: space.md,
+    paddingHorizontal: space.md + 2,
+    borderRadius: radius.md,
+  },
+  node: { width: NODE, height: NODE, borderRadius: NODE / 2, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  line: { width: 3, borderRadius: 2 },
+  stepHead: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: HEAD, paddingVertical: space.sm },
 });
 
-// ---------- Flat form section ----------
+// ---------- Progress bar ----------
 
-/** Overline label above a hairline; the flat replacement for a form card. */
-export function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+/** Rounded leaf-green fill: how much is done (never time). */
+export function ProgressBar({ done, total, noun }: { done: number; total: number; noun: string }) {
   const theme = useAppTheme();
+  const c = theme.colors;
   return (
     <View
-      style={{
-        gap: space.lg,
-        paddingTop: space.lg,
-        borderTopWidth: hairline(theme.highContrast),
-        borderTopColor: theme.colors.divider,
-      }}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={`${done} of ${total} ${noun} done`}
+      style={{ height: 10, borderRadius: radius.pill, backgroundColor: c.surfaceSunken, borderWidth: theme.highContrast ? 1 : 0, borderColor: c.border }}
     >
-      <AppText variant="overline" muted>
-        {title}
-      </AppText>
-      {children}
+      <View style={{ width: `${total ? (done / total) * 100 : 0}%`, height: "100%", borderRadius: radius.pill, backgroundColor: c.success }} />
     </View>
   );
 }

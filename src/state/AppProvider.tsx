@@ -9,6 +9,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { AccessibilityInfo } from "react-native";
 import { ChildProfile } from "../types/models";
 import * as db from "../lib/db";
+import { seedDemoIfNeeded } from "../lib/demo";
+import { nowIso } from "../lib/time";
 import { buildTheme, Theme } from "../theme/theme";
 
 interface AppState {
@@ -48,11 +50,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    loadActiveChild().then((child) => {
-      if (cancelled) return;
-      setActiveChildState(child);
-      setReady(true);
-    });
+    // Public demo builds only (EXPO_PUBLIC_DEMO_SEED): first visit gets sample data.
+    seedDemoIfNeeded(nowIso())
+      .then(loadActiveChild)
+      .then((child) => {
+        if (cancelled) return;
+        setActiveChildState(child);
+        setReady(true);
+      });
     return () => {
       cancelled = true;
     };

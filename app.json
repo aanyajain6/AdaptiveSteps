@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FF6B4A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -34,7 +34,15 @@
       ],
       "expo-image",
       "expo-font",
-      "expo-splash-screen"
-    ]
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#FFF8EC",
+          "imageWidth": 140
+        }
+      ]
+    ],
+    "backgroundColor": "#FFF8EC"
   }
 }

@@ -25,17 +25,17 @@ import {
   Hand,
   House,
   Lightbulb,
-  PartyPopper,
   Play,
   ThumbsDown,
   ThumbsUp,
   Volume2,
 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { Celebration, CELEBRATION_MS } from "../../components/Celebration";
 import { MoodCheckIn } from "../../components/MoodCheckIn";
-import { Dropdown, PageHeader, Stepper, StepperItem } from "../../components/structure";
+import { EmptyState } from "../../components/EmptyState";
+import { Dropdown, PageHeader, ProgressBar, Stepper, StepperItem } from "../../components/structure";
 import { AppText, Button, Icon, Screen } from "../../components/ui";
 import { adaptStep } from "../../lib/adaptation";
 import * as db from "../../lib/db";
@@ -59,8 +59,7 @@ const CHOICES: { value: ChoiceResponse; icon: LucideIcon; label: string; reply?:
 
 export default function SessionRunner() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { activeChild, theme } = useApp();
-  const c = theme.colors;
+  const { activeChild } = useApp();
   const { width } = useWindowDimensions();
   const wide = width >= TABLET_BREAKPOINT;
 
@@ -244,8 +243,12 @@ export default function SessionRunner() {
     return (
       <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
-        <Moment icon={PartyPopper} title="All done!" body={`You finished ${title}.`} />
-        <Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />
+        <EmptyState
+          celebrate
+          title="All done!"
+          body={`You finished ${title}. Hop is proud of you.`}
+          action={<Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />}
+        />
       </Screen>
     );
   }
@@ -310,14 +313,7 @@ export default function SessionRunner() {
         }
       />
       {/* Progress fill: steps finished, not time. */}
-      <View
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel={`${doneCount} of ${total} steps done`}
-        style={{ height: 4, borderRadius: radius.pill, backgroundColor: c.divider }}
-      >
-        <View style={{ width: `${(doneCount / total) * 100}%`, height: 4, borderRadius: radius.pill, backgroundColor: c.link }} />
-      </View>
+      <ProgressBar done={doneCount} total={total} noun="steps" />
     </View>
   );
 
@@ -385,8 +381,8 @@ function StepDetail({
   return (
     <View style={{ gap: space.lg }}>
       {showHint && hint ? (
-        <View style={{ flexDirection: "row", gap: space.md, padding: space.md, borderRadius: radius.sm, backgroundColor: c.surfaceSunken }}>
-          <Icon icon={Lightbulb} size={18} color={c.textMuted} />
+        <View style={{ flexDirection: "row", gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: c.accentSoft }}>
+          <Icon icon={Lightbulb} size={18} color={c.text} />
           <AppText style={{ flex: 1 }}>{hint}</AppText>
         </View>
       ) : null}
@@ -429,11 +425,16 @@ function StepDetail({
         </View>
       </View>
 
-      {/* Point-to-answer board: a separate, AAC-style way to respond. */}
+      {/* Point-to-answer board: a separate, AAC-style way to respond, set in its own sunken panel. */}
       <View
-        accessibilityRole="none"
-        accessibilityLabel="Answer by pointing"
-        style={{ gap: space.sm, paddingTop: space.lg, borderTopWidth: theme.highContrast ? 1 : StyleSheet.hairlineWidth, borderTopColor: c.divider }}
+        style={{
+          gap: space.sm,
+          padding: space.md,
+          borderRadius: radius.lg,
+          backgroundColor: c.surfaceSunken,
+          borderWidth: theme.highContrast ? 1 : 0,
+          borderColor: c.border,
+        }}
       >
         <View style={{ gap: 2 }}>
           <AppText variant="label">Answer by pointing</AppText>
@@ -448,18 +449,19 @@ function StepDetail({
               accessibilityRole="button"
               accessibilityLabel={`Choice: ${ch.label}`}
               onPress={() => onChoose(ch)}
-              style={({ pressed }) => ({
-                flex: 1,
-                minHeight: 64,
-                gap: space.xs,
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: radius.sm,
-                // Filled, borderless tiles: visibly a different control family from the outlined action buttons.
-                borderWidth: theme.highContrast ? 1 : 0,
-                borderColor: c.border,
-                backgroundColor: pressed ? c.border : c.surfaceSunken,
-              })}
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  minHeight: 68,
+                  gap: space.xs,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: radius.md,
+                  backgroundColor: pressed ? c.secondarySoft : c.surface,
+                  transform: pressed && !theme.reduceMotion ? [{ scale: 0.96 }] : undefined,
+                },
+                theme.elevation.card,
+              ]}
             >
               <Icon icon={ch.icon} size={20} color={c.text} />
               <AppText variant="caption">{ch.label}</AppText>
@@ -471,7 +473,7 @@ function StepDetail({
   );
 }
 
-/** Full-screen moment (break, finished): neutral icon, title, one line. */
+/** Calm full-screen moment (break): soft sky chip, title, one line. */
 function Moment({ icon, title, body }: { icon: LucideIcon; title: string; body: string }) {
   const theme = useAppTheme();
   const c = theme.colors;
@@ -484,7 +486,7 @@ function Moment({ icon, title, body }: { icon: LucideIcon; title: string; body: 
           borderRadius: 44,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: c.surfaceSunken,
+          backgroundColor: c.secondarySoft,
         }}
       >
         <Icon icon={icon} size={40} color={c.text} />

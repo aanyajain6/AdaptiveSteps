@@ -7,7 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ArrowRight, Delete, LockKeyhole } from "lucide-react-native";
 import { PageHeader } from "../components/structure";
 import { AppText, Button, Icon, Screen } from "../components/ui";
-import { space } from "../theme/theme";
+import { radius, space } from "../theme/theme";
 import * as db from "../lib/db";
 import { useApp } from "../state/AppProvider";
 
@@ -134,18 +134,26 @@ export default function PinScreen() {
         </AppText>
       </View>
 
-      {/* Flat keypad: no tiles, no frame -- digits on the page, divided by hairlines. */}
+      {/* Rounded, raised keys -- big and friendly, no frame around the pad. */}
       <View style={styles.pad}>
         {keys.map((k, i) =>
           k === "" ? (
-            <View key={i} style={[styles.key, keyDividers(i, c.divider)]} />
+            <View key={i} style={styles.key} />
           ) : (
             <Pressable
               key={i}
               accessibilityRole="button"
               accessibilityLabel={k === "del" ? "Delete" : k}
               onPress={() => (k === "del" ? setEntry((e) => e.slice(0, -1)) : press(k))}
-              style={({ pressed }) => [styles.key, keyDividers(i, c.divider), { backgroundColor: pressed ? c.surfaceSunken : "transparent" }]}
+              style={({ pressed }) => [
+                styles.key,
+                k === "del"
+                  ? { backgroundColor: pressed ? c.surfaceSunken : "transparent" }
+                  : [
+                      { backgroundColor: pressed ? c.primarySoft : c.surface, transform: pressed && !theme.reduceMotion ? [{ scale: 0.95 }] : undefined },
+                      theme.elevation.card,
+                    ],
+              ]}
             >
               {k === "del" ? (
                 <Icon icon={Delete} size={24} color={c.textMuted} />
@@ -169,20 +177,9 @@ export default function PinScreen() {
   );
 }
 
-const KEY_W = 96;
-
-/** Inner grid lines only (no outer frame), like a phone keypad. */
-function keyDividers(i: number, color: string) {
-  return {
-    borderColor: color,
-    borderRightWidth: i % 3 < 2 ? StyleSheet.hairlineWidth : 0,
-    borderBottomWidth: i < 9 ? StyleSheet.hairlineWidth : 0,
-  };
-}
-
 const styles = StyleSheet.create({
   dots: { flexDirection: "row", gap: 16 },
-  dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
-  pad: { flexDirection: "row", flexWrap: "wrap", width: KEY_W * 3, alignSelf: "center" },
-  key: { width: KEY_W, height: 60, alignItems: "center", justifyContent: "center" },
+  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
+  pad: { flexDirection: "row", flexWrap: "wrap", width: 3 * 84 + 2 * 14, gap: 14, alignSelf: "center" },
+  key: { width: 84, height: 64, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
 });

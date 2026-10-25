@@ -46,16 +46,18 @@ export function MoodCheckIn({
             accessibilityRole="button"
             accessibilityLabel={m.label}
             onPress={() => onPick(m.value)}
-            style={({ pressed }) => ({
-              width: 96,
-              paddingVertical: space.lg,
-              alignItems: "center",
-              gap: space.sm,
-              borderRadius: radius.sm,
-              borderWidth: theme.borderWidth,
-              borderColor: pressed ? theme.colors.primary : theme.colors.borderStrong,
-              backgroundColor: pressed ? theme.colors.primarySoft : theme.colors.page,
-            })}
+            style={({ pressed }) => [
+              {
+                width: 96,
+                paddingVertical: space.lg,
+                alignItems: "center",
+                gap: space.sm,
+                borderRadius: radius.lg,
+                backgroundColor: pressed ? theme.colors.accentSoft : theme.colors.surface,
+                transform: pressed && !theme.reduceMotion ? [{ scale: 0.96 }] : undefined,
+              },
+              theme.elevation.card,
+            ]}
           >
             <Text style={{ fontSize: 40 }}>{m.emoji}</Text>
             <AppText variant="caption">{m.label}</AppText>

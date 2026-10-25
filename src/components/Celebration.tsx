@@ -30,11 +30,11 @@ export function Celebration({ message = "Nice work!" }: { message?: string }) {
           borderRadius: 44,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: theme.colors.primary,
+          backgroundColor: theme.colors.success,
           transform: [{ scale }],
         }}
       >
-        <Icon icon={Check} size={44} color={theme.colors.onPrimary} />
+        <Icon icon={Check} size={44} color={theme.colors.onInk} />
       </Animated.View>
       <AppText variant="display">{message}</AppText>
     </View>

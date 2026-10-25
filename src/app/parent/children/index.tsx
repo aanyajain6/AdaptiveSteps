@@ -2,7 +2,8 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import { Plus, UserRound, Users } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { PageHeader, StatusList, StatusRow } from "../../../components/structure";
-import { AppText, Button, Screen } from "../../../components/ui";
+import { EmptyState } from "../../../components/EmptyState";
+import { Button, Screen } from "../../../components/ui";
 import * as db from "../../../lib/db";
 import { useApp } from "../../../state/AppProvider";
 import { ChildProfile } from "../../../types/models";
@@ -36,7 +37,7 @@ export default function ChildrenList() {
       />
 
       {children.length === 0 ? (
-        <AppText muted>No profiles yet.</AppText>
+        <EmptyState size={120} title="No profiles yet" body="Add a profile for each learner. Hop will help them through their first session." />
       ) : (
         <StatusList>
           {children.map((child) => (

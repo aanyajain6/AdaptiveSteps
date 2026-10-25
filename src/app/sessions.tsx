@@ -2,8 +2,9 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import { ClipboardList } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { PageHeader, StatusList, StatusRow } from "../components/structure";
+import { EmptyState } from "../components/EmptyState";
 import type { StatusKind } from "../components/structure";
-import { AppText, Screen } from "../components/ui";
+import { Screen } from "../components/ui";
 import * as db from "../lib/db";
 import { nowIso } from "../lib/time";
 import { useApp } from "../state/AppProvider";
@@ -38,7 +39,9 @@ export default function ChooseSession() {
     <Screen>
       <Stack.Screen options={{ title: "" }} />
       <PageHeader icon={ClipboardList} title="Study sessions" />
-      {sessions?.length === 0 && <AppText muted>No study sessions yet. Ask a grown-up to add one.</AppText>}
+      {sessions?.length === 0 && (
+        <EmptyState title="No study sessions yet" body="Ask a grown-up to make one. Hop will be ready to climb the steps with you." />
+      )}
       {sessions && sessions.length > 0 && (
         <StatusList>
           {sessions.map((s) => (

@@ -3,17 +3,18 @@
 // and where it stands. The parent entry point sits in the header.
 
 import { Href, router, useFocusEffect } from "expo-router";
-import { CalendarDays, ClipboardList, Layers, Lock, Play } from "lucide-react-native";
+import { CalendarDays, ClipboardList, Layers, Lock, Play, Star } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { AppHeader, BrandMark } from "../components/Brand";
+import { AppHeader } from "../components/Brand";
+import { EmptyState } from "../components/EmptyState";
 import { Dropdown, PageHeader, StatusList, StatusRow } from "../components/structure";
 import type { StatusKind } from "../components/structure";
-import { AppText, Button, Screen } from "../components/ui";
+import { AppText, Button, Icon, Screen } from "../components/ui";
 import * as db from "../lib/db";
 import { nowIso } from "../lib/time";
 import { useApp } from "../state/AppProvider";
-import { space } from "../theme/theme";
+import { radius, space } from "../theme/theme";
 
 type Filter = "today" | "all" | "subject";
 
@@ -49,7 +50,7 @@ function dueText(dueAt: string, endOfToday: string): string {
 }
 
 export default function ChildHome() {
-  const { activeChild, lockParent } = useApp();
+  const { activeChild, lockParent, theme } = useApp();
   const [data, setData] = useState<HomeData | null>(null);
   const [filter, setFilter] = useState<Filter>("today");
 
@@ -121,17 +122,12 @@ export default function ChildHome() {
   if (!activeChild) {
     return (
       <Screen header={<AppHeader />} style={{ justifyContent: "center" }}>
-        <View style={{ alignItems: "flex-start", gap: space.lg }}>
-          <BrandMark size={48} />
-          <View style={{ gap: space.sm }}>
-            <AppText variant="title">Welcome to AdaptiveSteps</AppText>
-            <AppText muted>
-              Step-by-step support for homework and review that adapts to how each learner actually
-              does. A parent or teacher sets things up first.
-            </AppText>
-          </View>
-          <Button label="Get started" onPress={() => router.push("/pin")} />
-        </View>
+        <EmptyState
+          size={180}
+          title="Hi, I'm Hop!"
+          body="AdaptiveSteps breaks homework and review into small steps and adapts to how each learner actually does. A parent or teacher sets things up first."
+          action={<Button label="Get started" icon={Play} size="lg" onPress={() => router.push("/pin")} />}
+        />
       </Screen>
     );
   }
@@ -166,7 +162,7 @@ export default function ChildHome() {
         <PageHeader
           icon={CalendarDays}
           title="Today"
-          meta={data ? `${data.dateLabel} · ${data.stepsThisWeek} steps finished this week` : " "}
+          meta={data?.dateLabel ?? " "}
           right={
             <Dropdown<Filter>
               label="Viewing by"
@@ -180,6 +176,27 @@ export default function ChildHome() {
             />
           }
         />
+        {data && data.stepsThisWeek > 0 ? (
+          // Sunshine is reserved for rewards and streaks.
+          <View
+            accessible
+            accessibilityLabel={`${data.stepsThisWeek} steps finished this week`}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              alignSelf: "flex-start",
+              marginTop: space.sm,
+              paddingHorizontal: space.md,
+              paddingVertical: 6,
+              borderRadius: radius.pill,
+              backgroundColor: theme.colors.accentSoft,
+            }}
+          >
+            <Icon icon={Star} size={16} color={theme.colors.text} />
+            <AppText variant="caption">{`${data.stepsThisWeek} steps finished this week`}</AppText>
+          </View>
+        ) : null}
       </View>
 
       {nextSession?.href ? (
@@ -188,8 +205,14 @@ export default function ChildHome() {
         <Button label={`Practice ${dueCards} ${dueCards === 1 ? "card" : "cards"}`} icon={Layers} size="lg" onPress={() => router.push("/review")} />
       ) : null}
 
-      {data && rows.length === 0 ? (
-        <AppText muted>{"Nothing due today. Ask a grown-up if you'd like something new."}</AppText>
+      {data && data.rows.length === 0 ? (
+        <EmptyState title="Nothing here yet" body="Ask a grown-up to add a study session or some review cards. Hop will be waiting." />
+      ) : data && rows.length === 0 ? (
+        <EmptyState
+          celebrate
+          title="All done for today!"
+          body="Nothing else is due today. Switch the view to All to see everything."
+        />
       ) : null}
 
       {groups.map(([subject, list]) =>

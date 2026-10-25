@@ -33,3 +33,13 @@ Every adjustment the engine makes writes a plain-language reason to an audit log
 ## Status
 
 Actively in development. The adaptive engine and its test suite are stable; the UI has been through several design passes and currently covers the full app (home, session runner, review cards, parent dashboard with pending-approval review, profile/session/card builders, accessibility settings, and PIN-gated Parent Mode) in one consistent design system.
+
+## Web demo
+
+Build the public web demo with:
+
+```bash
+npm run export:web   # = EXPO_PUBLIC_DEMO_SEED=true expo export --platform web
+```
+
+The `EXPO_PUBLIC_DEMO_SEED` flag makes a first-time visitor's browser start with sample data (one learner, one session with a week of history, a few review cards) instead of an empty app. It seeds once per browser and never on a device that already has a profile. Local development, the native apps, and tests leave it off. Fonts ship from `assets/fonts` (SIL Open Font License) so they load on any static host.
