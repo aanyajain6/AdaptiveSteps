@@ -12,8 +12,8 @@ import { AppText, Button, Card } from "./ui";
 export function chartTheme(theme: Theme): CartesianChartTheme {
   const c = theme.colors;
   return {
-    background: c.surface,
-    plotBackground: c.surface,
+    background: c.page,
+    plotBackground: c.page,
     grid: c.border,
     axis: c.border,
     text: c.text,
@@ -47,7 +47,7 @@ export function ChartCard({
 }) {
   const [showTable, setShowTable] = useState(false);
   return (
-    <Card flat>
+    <Card>
       <View style={{ gap: space.xs }}>
         <AppText variant="heading">{title}</AppText>
         <AppText variant="caption" muted>

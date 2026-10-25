@@ -1,8 +1,9 @@
 import { router, useFocusEffect } from "expo-router";
-import { ChartLine, ClipboardList, Eye, Layers, LogOut, Users } from "lucide-react-native";
+import { ChartLine, ClipboardList, Eye, Layers, LogOut, ShieldCheck, Users } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { View } from "react-native";
-import { AppText, Badge, Button, Card, IconTile, ListGroup, ListRow, Screen, Section } from "../../components/ui";
+import { PageHeader, StatusList, StatusRow } from "../../components/structure";
+import { AppText, Button, Screen } from "../../components/ui";
 import * as db from "../../lib/db";
 import { useApp } from "../../state/AppProvider";
 import { space } from "../../theme/theme";
@@ -33,68 +34,75 @@ export default function ParentHome() {
 
   return (
     <Screen>
-      <Card raised style={{ flexDirection: "row", alignItems: "center", gap: space.lg }}>
-        <IconTile icon={Users} size={48} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <AppText variant="overline" muted>
-            Child Mode
-          </AppText>
-          <AppText variant="title">{activeChild?.name ?? "No profile yet"}</AppText>
-        </View>
-        {counts.pending > 0 && <Badge label={`${counts.pending} to review`} />}
-      </Card>
+      <PageHeader
+        icon={ShieldCheck}
+        title="Parent Mode"
+        meta={activeChild ? `Child Mode is set up for ${activeChild.name}` : "No child profile yet"}
+      />
 
-      {activeChild && (
-        <Section title="Insights">
-          <ListGroup>
-            <ListRow
-              icon={ChartLine}
-              title="Progress"
-              subtitle={counts.pending ? "Suggestions waiting for your OK" : "Charts, hardest steps, and change history"}
-              trailing={counts.pending ? `${counts.pending} new` : undefined}
-              onPress={() => router.push("/parent/dashboard")}
-            />
-          </ListGroup>
-        </Section>
+      {activeChild ? (
+        <Button
+          label={counts.pending ? `Review ${plural(counts.pending, "suggestion")}` : "View progress"}
+          icon={ChartLine}
+          size="lg"
+          onPress={() => router.push("/parent/dashboard")}
+        />
+      ) : (
+        <Button label="Add a child profile" icon={Users} size="lg" onPress={() => router.push({ pathname: "/parent/children/[id]", params: { id: "new" } })} />
       )}
 
-      <Section title="Content">
-        <ListGroup>
-          <ListRow
+      <View style={{ gap: space.sm }}>
+        <AppText variant="overline" muted>
+          Content{activeChild ? ` for ${activeChild.name}` : ""}
+        </AppText>
+        <StatusList>
+          <StatusRow
             icon={ClipboardList}
             title="Study sessions"
-            subtitle="Step-by-step routines for homework"
+            meta="Step-by-step routines for homework"
             trailing={activeChild ? String(counts.sessions) : undefined}
             onPress={() => router.push("/parent/sessions")}
           />
-          <ListRow
+          <StatusRow
             icon={Layers}
             title="Review cards"
-            subtitle="Spaced practice for facts and words"
+            meta="Spaced practice for facts and words"
             trailing={activeChild ? String(counts.cards) : undefined}
             onPress={() => router.push("/parent/cards")}
           />
-        </ListGroup>
-      </Section>
+          {activeChild ? (
+            <StatusRow
+              icon={ChartLine}
+              title="Progress"
+              meta="Charts, hardest steps, and why support changed"
+              trailing={counts.pending ? `${counts.pending} waiting` : undefined}
+              onPress={() => router.push("/parent/dashboard")}
+            />
+          ) : null}
+        </StatusList>
+      </View>
 
-      <Section title="Settings">
-        <ListGroup>
-          <ListRow
+      <View style={{ gap: space.sm }}>
+        <AppText variant="overline" muted>
+          Settings
+        </AppText>
+        <StatusList>
+          <StatusRow
             icon={Users}
             title="Child profiles"
-            subtitle={counts.children ? plural(counts.children, "profile") : "Add your first profile"}
+            meta={counts.children ? plural(counts.children, "profile") : "Add your first profile"}
             onPress={() => router.push("/parent/children")}
           />
-          <ListRow
+          <StatusRow
             icon={Eye}
             title="Accessibility"
-            subtitle="Text size, contrast, motion"
+            meta="Text size, contrast, motion"
             onPress={() => router.push("/parent/accessibility")}
           />
-        </ListGroup>
-      </Section>
+        </StatusList>
+      </View>
 
-      <Button label="Exit Parent Mode" icon={LogOut} variant="secondary" onPress={exitParentMode} />
+      <Button label="Exit Parent Mode" icon={LogOut} variant="outline" onPress={exitParentMode} />
     </Screen>
   );
 }

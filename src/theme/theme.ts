@@ -1,14 +1,15 @@
 // ============================================================
 // Design system
 // ============================================================
-// The single source for color, type, spacing, radius, and elevation.
+// The single source for color, type, spacing, and radius. Flat by
+// rule: separation comes from hairline borders, never shadows.
 // Components read tokens from here and never hard-code a value.
 //
 // Built from the active child's ChildProfile (UDL settings: text size,
 // high contrast, reduced motion). This is purely HOW things look -- it
 // never changes how much support the engine gives.
 
-import { TextStyle, ViewStyle } from "react-native";
+import { TextStyle } from "react-native";
 
 // ---------- Palette ----------
 // One brand hue (deep teal: calm, not alarm-red or default-iOS blue),
@@ -46,9 +47,9 @@ export interface ThemeColors {
   onPrimary: string;
   primarySoft: string;
   chart: string;
-  // Structured (list/stepper) layouts: white page, ink actions, accent only for links/progress.
+  // White page; accent only for links, selection, progress, and the one primary action.
   page: string;
-  ink: string;
+  /** Text/icons on an accent-filled shape (e.g. the active stepper circle). */
   onInk: string;
   link: string;
   divider: string;
@@ -77,7 +78,6 @@ const standard: ThemeColors = {
   primarySoft: brand[100],
   chart: brand[500],
   page: neutral[0],
-  ink: "#1F2328",
   onInk: neutral[0],
   link: brand[600],
   divider: "#E6E6E3",
@@ -106,7 +106,6 @@ const highContrast: ThemeColors = {
   primarySoft: "#1F1F1F",
   chart: "#FFD600",
   page: "#000000",
-  ink: "#FFD600",
   onInk: "#000000",
   link: "#FFD600",
   divider: "#FFFFFF",
@@ -168,8 +167,6 @@ export interface Theme {
   type: (variant: TextVariant) => TextStyle;
   borderWidth: number;
   radius: number;
-  /** Intentional, quiet elevation. High contrast swaps shadow for a solid border. */
-  elevation: { card: ViewStyle; raised: ViewStyle };
 }
 
 export const MIN_TEXT_SCALE = 1.0;
@@ -183,24 +180,6 @@ export function buildTheme(opts: {
   const textScale = Math.max(MIN_TEXT_SCALE, Math.min(MAX_TEXT_SCALE, opts.textScale || 1));
   const colors = opts.highContrast ? highContrast : standard;
   const font = (size: number) => Math.round(size * textScale);
-
-  const elevation = opts.highContrast
-    ? {
-        card: { borderWidth: 2, borderColor: colors.border },
-        raised: { borderWidth: 2, borderColor: colors.border },
-      }
-    : {
-        card: {
-          borderWidth: 1,
-          borderColor: colors.border,
-          boxShadow: "0px 1px 2px rgba(24, 25, 29, 0.04), 0px 1px 1px rgba(24, 25, 29, 0.03)",
-        },
-        raised: {
-          borderWidth: 1,
-          borderColor: colors.border,
-          boxShadow: "0px 4px 12px rgba(24, 25, 29, 0.06), 0px 1px 3px rgba(24, 25, 29, 0.05)",
-        },
-      };
 
   return {
     colors,
@@ -220,6 +199,5 @@ export function buildTheme(opts: {
     },
     borderWidth: opts.highContrast ? 2 : 1,
     radius: radius.md,
-    elevation,
   };
 }

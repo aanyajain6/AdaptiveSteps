@@ -214,13 +214,13 @@ export default function SessionRunner() {
   }
 
   const title = session?.title ?? "Study session";
-  const headerOptions = { title: "", headerStyle: { backgroundColor: c.page } };
+  const headerOptions = { title: "" };
 
-  if (phase === "loading") return <Screen tone="page">{null}</Screen>;
+  if (phase === "loading") return <Screen>{null}</Screen>;
 
   if (phase === "missing") {
     return (
-      <Screen tone="page">
+      <Screen>
         <AppText>{"This session isn't available anymore."}</AppText>
         <Button label="Go back" onPress={() => router.back()} />
       </Screen>
@@ -229,7 +229,7 @@ export default function SessionRunner() {
 
   if (phase === "moodBefore" || phase === "moodAfter") {
     return (
-      <Screen tone="page" style={{ justifyContent: "center" }}>
+      <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
         <MoodCheckIn
           prompt={phase === "moodBefore" ? "How are you feeling?" : "How do you feel now?"}
@@ -242,7 +242,7 @@ export default function SessionRunner() {
 
   if (phase === "finished") {
     return (
-      <Screen tone="page" style={{ justifyContent: "center" }}>
+      <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
         <Moment icon={PartyPopper} title="All done!" body={`You finished ${title}.`} />
         <Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />
@@ -252,7 +252,7 @@ export default function SessionRunner() {
 
   if (phase === "break") {
     return (
-      <Screen tone="page" style={{ justifyContent: "center" }}>
+      <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
         <Moment icon={Coffee} title="Break time" body="Take your time. Stretch, get some water, or take a few slow breaths." />
         <Button label="I'm ready" icon={Play} size="lg" onPress={endBreak} />
@@ -322,7 +322,7 @@ export default function SessionRunner() {
   );
 
   return (
-    <Screen tone="page" style={wide ? { maxWidth: MAX_WIDE_CONTENT_WIDTH } : undefined}>
+    <Screen style={wide ? { maxWidth: MAX_WIDE_CONTENT_WIDTH } : undefined}>
       <Stack.Screen options={headerOptions} />
       {header}
       {wide ? (

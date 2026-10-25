@@ -61,7 +61,7 @@ export function PresentationFields({
           <Button
             label="Smaller text"
             icon={AArrowDown}
-            variant="secondary"
+            variant="outline"
             disabled={value.textScale <= MIN_TEXT_SCALE}
             onPress={() => setScale(value.textScale - STEP)}
             style={{ flex: 1 }}
@@ -69,7 +69,7 @@ export function PresentationFields({
           <Button
             label="Larger text"
             icon={AArrowUp}
-            variant="secondary"
+            variant="outline"
             disabled={value.textScale >= MAX_TEXT_SCALE}
             onPress={() => setScale(value.textScale + STEP)}
             style={{ flex: 1 }}

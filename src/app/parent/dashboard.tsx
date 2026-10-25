@@ -13,6 +13,7 @@ import { ChartCard, chartTheme } from "../../components/ChartCard";
 import { MOODS } from "../../components/MoodCheckIn";
 import { ChartLine, Check, ClipboardList, Info, Layers } from "lucide-react-native";
 import { PageHeader, StatusList, StatusRow } from "../../components/structure";
+import type { StatusKind } from "../../components/structure";
 import { AppText, Button, Card, Icon, Screen, Section } from "../../components/ui";
 import { approveAdjustment, declineAdjustment, isPending } from "../../lib/adaptation";
 import * as db from "../../lib/db";
@@ -150,7 +151,7 @@ export default function Dashboard() {
   const recent = [...data.attempts].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 5);
 
   return (
-    <Screen tone="page">
+    <Screen>
       <PageHeader icon={ChartLine} title="Progress" meta={`${activeChild.name} · Every change below includes the reason it was made`} />
 
       {/* ---- Needs your review: same status-row pattern as the child's lists ---- */}
@@ -248,7 +249,7 @@ export default function Dashboard() {
           />
         </ChartCard>
 
-        <Card flat>
+        <Card>
           <View style={{ gap: space.xs }}>
             <AppText variant="heading">Hardest steps</AppText>
             <AppText variant="caption" muted>
@@ -347,7 +348,7 @@ export default function Dashboard() {
 
       {/* ---- Recent sessions with mood ---- */}
       <Section title="Activity">
-        <Card flat>
+        <Card>
           <AppText variant="heading">Recent sessions</AppText>
           {recent.length === 0 && <AppText muted>No sessions yet.</AppText>}
           {recent.map((a) => {
@@ -376,20 +377,30 @@ export default function Dashboard() {
         </Card>
 
         {/* ---- Explainable log ---- */}
-        <Card flat>
-          <AppText variant="heading">Why support changed</AppText>
-          {history.length === 0 && <AppText muted>No changes yet.</AppText>}
-          {history.map((adj) => (
-            <View key={adj.id} style={{ gap: 2 }}>
-              <AppText variant="label">{itemName(adj)}</AppText>
-              <AppText>{adj.reason}</AppText>
-              <AppText variant="caption" muted>
-                {tierName(adj, adj.fromTier)} → {tierName(adj, adj.toTier)} · {shortDate(adj.resolvedAt ?? adj.createdAt)} ·{" "}
-                {statusText(adj)}
-              </AppText>
-            </View>
-          ))}
-        </Card>
+        <View style={{ gap: space.sm }}>
+          <View style={{ gap: 2 }}>
+            <AppText variant="heading">Why support changed</AppText>
+            <AppText variant="caption" muted>
+              Every change the app made, with the reason it gave.
+            </AppText>
+          </View>
+          {history.length === 0 ? (
+            <AppText muted>No changes yet.</AppText>
+          ) : (
+            <StatusList>
+              {history.map((adj) => (
+                <StatusRow
+                  key={adj.id}
+                  icon={adj.itemType === "review_card" ? Layers : ClipboardList}
+                  title={itemName(adj)}
+                  meta={shortDate(adj.resolvedAt ?? adj.createdAt)}
+                  detail={`${tierName(adj, adj.fromTier)} → ${tierName(adj, adj.toTier)}. ${adj.reason}`}
+                  status={historyStatus(adj)}
+                />
+              ))}
+            </StatusList>
+          )}
+        </View>
       </Section>
     </Screen>
   );
@@ -397,7 +408,7 @@ export default function Dashboard() {
 
 function StatTile({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <Card flat style={{ flex: 1, gap: space.xs }}>
+    <Card style={{ flex: 1, gap: space.xs }}>
       <AppText variant="caption" muted>
         {label}
       </AppText>
@@ -409,13 +420,13 @@ function StatTile({ label, value, detail }: { label: string; value: string; deta
   );
 }
 
-function statusText(adj: AdaptiveAdjustment): string {
+function historyStatus(adj: AdaptiveAdjustment): StatusKind {
   switch (adj.status) {
     case "declined":
-      return "you said not yet";
+      return "declined";
     case "superseded":
-      return "replaced by a newer change";
+      return "superseded";
     default:
-      return adj.requiresParentApproval ? "you approved" : "applied automatically";
+      return adj.requiresParentApproval ? "approved" : "automatic";
   }
 }

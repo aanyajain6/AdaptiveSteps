@@ -11,10 +11,13 @@ import {
   Check,
   ChevronDown,
   Circle,
+  CircleArrowUp,
   CircleCheck,
   CircleDot,
+  CircleMinus,
   CirclePlus,
   CircleQuestionMark,
+  CircleSlash,
 } from "lucide-react-native";
 import React, { useRef, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
@@ -162,7 +165,15 @@ export function Dropdown<T extends string>({
 
 // ---------- Status indicator ----------
 
-export type StatusKind = StepStatus | "extra_support";
+export type StatusKind =
+  | StepStatus
+  | "extra_support"
+  | "active"
+  // Outcomes of an adaptive adjustment (parent-facing history).
+  | "approved"
+  | "declined"
+  | "automatic"
+  | "superseded";
 
 const STATUS: Record<StatusKind, { icon: LucideIcon; label: string }> = {
   not_started: { icon: Circle, label: STEP_STATUS_LABELS.not_started },
@@ -170,6 +181,11 @@ const STATUS: Record<StatusKind, { icon: LucideIcon; label: string }> = {
   needs_help: { icon: CircleQuestionMark, label: STEP_STATUS_LABELS.needs_help },
   done: { icon: CircleCheck, label: STEP_STATUS_LABELS.done },
   extra_support: { icon: CirclePlus, label: "Extra Support" },
+  active: { icon: CircleDot, label: "In Child Mode" },
+  approved: { icon: CircleCheck, label: "Approved" },
+  declined: { icon: CircleSlash, label: "Not yet" },
+  automatic: { icon: CircleArrowUp, label: "Automatic" },
+  superseded: { icon: CircleMinus, label: "Replaced" },
 };
 
 /** Outlined circle glyph + plain-language label, all in the same muted ink. */
@@ -205,14 +221,23 @@ export function StatusRow({
   icon,
   title,
   meta,
+  detail,
   status,
+  trailing,
   onPress,
+  accessibilityHint,
 }: {
   icon: LucideIcon;
   title: string;
+  /** One muted line: subject, due date, counts. */
   meta?: string;
-  status: StatusKind;
+  /** Full-length secondary text that must never be cut off (e.g. an adjustment's reason). */
+  detail?: string;
+  status?: StatusKind;
+  /** Right-aligned plain text when there's no status (e.g. a count). */
+  trailing?: string;
   onPress?: () => void;
+  accessibilityHint?: string;
 }) {
   const theme = useAppTheme();
   const c = theme.colors;
@@ -220,7 +245,8 @@ export function StatusRow({
     <Pressable
       disabled={!onPress}
       accessibilityRole={onPress ? "link" : undefined}
-      accessibilityLabel={[title, meta, STATUS[status].label].filter(Boolean).join(", ")}
+      accessibilityLabel={[title, meta, detail, status ? STATUS[status].label : trailing].filter(Boolean).join(", ")}
+      accessibilityHint={accessibilityHint}
       onPress={onPress}
       style={({ pressed }) => [styles.row, { backgroundColor: pressed ? c.surfaceSunken : "transparent" }]}
     >
@@ -234,8 +260,14 @@ export function StatusRow({
             {meta}
           </AppText>
         ) : null}
+        {detail ? <AppText variant="caption">{detail}</AppText> : null}
       </View>
-      <StatusIndicator status={status} />
+      {status ? <StatusIndicator status={status} /> : null}
+      {!status && trailing ? (
+        <AppText variant="caption" muted>
+          {trailing}
+        </AppText>
+      ) : null}
     </Pressable>
   );
 }
@@ -248,7 +280,8 @@ export interface StepperItem {
   number: number;
   title: string;
   meta?: string;
-  status: StepStatus;
+  /** Omitted in authoring mode, where nothing has a run status yet. */
+  status?: StepStatus;
 }
 
 /**
@@ -256,6 +289,10 @@ export interface StepperItem {
  * done = check, current = filled accent, upcoming = outlined + muted.
  * The line below a finished step fills with the accent (progress).
  * `renderExpanded` draws the active step's content under its row.
+ *
+ * variant "authoring" (the builder): same sequence visual, but no
+ * progress meaning -- no checks, no filled line, every title is an
+ * edit link; only the step being edited is filled.
  */
 export function Stepper({
   items,
@@ -263,7 +300,11 @@ export function Stepper({
   onSelect,
   renderExpanded,
   noun = "Step",
+  variant = "progress",
+  selectHint = "Go to this step",
 }: {
+  variant?: "progress" | "authoring";
+  selectHint?: string;
   /** What each item is called for assistive tech ("Step 2", "Card 2"). */
   noun?: string;
   items: StepperItem[];
@@ -278,10 +319,11 @@ export function Stepper({
     <View accessibilityRole="list">
       {items.map((item, i) => {
         const isCurrent = item.key === currentKey;
-        const isDone = item.status === "done";
+        const authoring = variant === "authoring";
+        const isDone = !authoring && item.status === "done";
         const first = i === 0;
         const last = i === items.length - 1;
-        const lineAbove = !first && items[i - 1].status === "done" ? c.link : c.divider;
+        const lineAbove = !authoring && !first && items[i - 1].status === "done" ? c.link : c.divider;
         const lineBelow = isDone ? c.link : c.divider;
 
         const circle = isCurrent ? (
@@ -320,15 +362,15 @@ export function Stepper({
                 accessibilityRole="button"
                 accessibilityState={{ selected: isCurrent }}
                 // "current" is in the label because web drops the selected state on buttons.
-                accessibilityLabel={`${noun} ${item.number}${isCurrent ? ", current" : ""}: ${item.title}. ${STATUS[item.status].label}.`}
-                accessibilityHint={isCurrent ? undefined : "Go to this step"}
+                accessibilityLabel={`${noun} ${item.number}${isCurrent ? (authoring ? ", editing" : ", current") : ""}: ${item.title}.${item.status ? ` ${STATUS[item.status].label}.` : ""}`}
+                accessibilityHint={isCurrent ? undefined : selectHint}
                 onPress={() => onSelect?.(item.key)}
                 style={({ pressed }) => [styles.stepHead, { opacity: pressed ? 0.7 : 1 }]}
               >
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText
                     variant={isCurrent ? "heading" : "label"}
-                    style={{ color: isCurrent ? c.text : item.status === "not_started" ? c.textMuted : c.link }}
+                    style={{ color: isCurrent ? c.text : !authoring && item.status === "not_started" ? c.textMuted : c.link }}
                     numberOfLines={isCurrent ? undefined : 2}
                   >
                     {item.title}
@@ -339,7 +381,7 @@ export function Stepper({
                     </AppText>
                   ) : null}
                 </View>
-                <StatusIndicator status={item.status} />
+                {item.status ? <StatusIndicator status={item.status} /> : null}
               </Pressable>
               {isCurrent && renderExpanded ? <View style={{ paddingBottom: space.md }}>{renderExpanded(item)}</View> : null}
             </View>
@@ -367,3 +409,25 @@ const styles = StyleSheet.create({
   node: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   stepHead: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 56, paddingVertical: space.sm },
 });
+
+// ---------- Flat form section ----------
+
+/** Overline label above a hairline; the flat replacement for a form card. */
+export function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useAppTheme();
+  return (
+    <View
+      style={{
+        gap: space.lg,
+        paddingTop: space.lg,
+        borderTopWidth: hairline(theme.highContrast),
+        borderTopColor: theme.colors.divider,
+      }}
+    >
+      <AppText variant="overline" muted>
+        {title}
+      </AppText>
+      {children}
+    </View>
+  );
+}

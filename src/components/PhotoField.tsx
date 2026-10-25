@@ -42,8 +42,8 @@ export function PhotoField({
         />
       ) : null}
       <View style={{ flexDirection: "row", gap: space.sm, flexWrap: "wrap" }}>
-        <Button label={uri ? "Replace" : "Choose photo"} icon={ImagePlus} variant="secondary" disabled={busy} onPress={() => choose("library")} style={{ flexGrow: 1 }} />
-        <Button label="Camera" icon={Camera} variant="secondary" disabled={busy} onPress={() => choose("camera")} style={{ flexGrow: 1 }} />
+        <Button label={uri ? "Replace" : "Choose photo"} icon={ImagePlus} variant="outline" disabled={busy} onPress={() => choose("library")} style={{ flexGrow: 1 }} />
+        <Button label="Camera" icon={Camera} variant="outline" disabled={busy} onPress={() => choose("camera")} style={{ flexGrow: 1 }} />
         {uri ? <Button label="Remove photo" icon={X} variant="ghost" onPress={() => onChange(undefined)} /> : null}
       </View>
     </View>

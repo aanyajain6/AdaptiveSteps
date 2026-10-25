@@ -120,7 +120,7 @@ export default function ChildHome() {
 
   if (!activeChild) {
     return (
-      <Screen tone="page" header={<AppHeader />} style={{ justifyContent: "center" }}>
+      <Screen header={<AppHeader />} style={{ justifyContent: "center" }}>
         <View style={{ alignItems: "flex-start", gap: space.lg }}>
           <BrandMark size={48} />
           <View style={{ gap: space.sm }}>
@@ -158,7 +158,7 @@ export default function ChildHome() {
       : [["", rows]];
 
   return (
-    <Screen tone="page" header={<AppHeader right={parentButton} />}>
+    <Screen header={<AppHeader right={parentButton} />}>
       <View style={{ gap: space.xs }}>
         <AppText muted>
           {data?.greeting ?? "Hello"}, {activeChild.name}

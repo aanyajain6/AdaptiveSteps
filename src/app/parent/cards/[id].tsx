@@ -2,10 +2,13 @@
 // schedule and support level; it's the same skill, worded better.
 
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { Trash2 } from "lucide-react-native";
+import { Check, Layers, Trash2 } from "lucide-react-native";
+import { View } from "react-native";
+import { FormSection, PageHeader } from "../../../components/structure";
 import { useEffect, useState } from "react";
 import { PhotoField } from "../../../components/PhotoField";
-import { AppText, Badge, Button, Card, Field, Screen } from "../../../components/ui";
+import { AppText, Button, Field, Screen } from "../../../components/ui";
+import { space } from "../../../theme/theme";
 import { confirm } from "../../../lib/confirm";
 import * as db from "../../../lib/db";
 import { deletePhoto } from "../../../lib/photos";
@@ -82,8 +85,18 @@ export default function EditCard() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: isNew ? "New card" : "Edit card" }} />
-      <Card>
+      <Stack.Screen options={{ title: "" }} />
+      <PageHeader
+        icon={Layers}
+        title={isNew ? "New card" : "Edit card"}
+        meta={
+          existing
+            ? `Current support: ${CARD_TIER_LABELS[existing.supportTier]}. Editing the wording keeps its schedule.`
+            : "New cards are ready to practice right away."
+        }
+      />
+
+      <FormSection title="Front">
         <Field label="Subject" value={subject} onChangeText={setSubject} placeholder="e.g. Math facts" maxLength={40} />
         <Field
           label="Front (question)"
@@ -94,6 +107,9 @@ export default function EditCard() {
           multiline
         />
         <PhotoField label="Front photo (optional)" uri={frontPhotoUri} onChange={(u) => { setFrontPhotoUri(u); setError(""); }} />
+      </FormSection>
+
+      <FormSection title="Back">
         <Field
           label="Back (answer)"
           value={back}
@@ -102,15 +118,17 @@ export default function EditCard() {
           maxLength={200}
           multiline
         />
-      </Card>
-      {existing && <Badge label={`Current support: ${CARD_TIER_LABELS[existing.supportTier]}`} tone="neutral" />}
+      </FormSection>
+
       {error ? (
         <AppText accessibilityLiveRegion="polite" style={{ color: theme.colors.danger }}>
           {error}
         </AppText>
       ) : null}
-      <Button label={isNew ? "Create card" : "Save card"} size="lg" onPress={save} />
-      {existing && <Button label="Delete card" icon={Trash2} variant="danger" onPress={remove} />}
+      <View style={{ gap: space.sm }}>
+        <Button label={isNew ? "Create card" : "Save card"} icon={Check} size="lg" onPress={save} />
+        {existing && <Button label="Delete card" icon={Trash2} variant="danger" onPress={remove} />}
+      </View>
     </Screen>
   );
 }

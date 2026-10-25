@@ -4,9 +4,10 @@
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Delete, LockKeyhole } from "lucide-react-native";
-import { AppText, Icon, IconTile, Screen } from "../components/ui";
-import { radius, space } from "../theme/theme";
+import { ArrowRight, Delete, LockKeyhole } from "lucide-react-native";
+import { PageHeader } from "../components/structure";
+import { AppText, Button, Icon, Screen } from "../components/ui";
+import { space } from "../theme/theme";
 import * as db from "../lib/db";
 import { useApp } from "../state/AppProvider";
 
@@ -67,13 +68,13 @@ export default function PinScreen() {
       if (pin === savedPin) {
         enterParentMode();
       } else {
-        const next = tries + 1;
-        if (next >= MAX_TRIES) {
+        const attempts = tries + 1;
+        if (attempts >= MAX_TRIES) {
           setLocked(true);
           setTries(0);
           setMessage("Too many tries. Try again in 30 seconds.");
         } else {
-          setTries(next);
+          setTries(attempts);
           setMessage("Incorrect PIN.");
         }
       }
@@ -83,9 +84,7 @@ export default function PinScreen() {
   function press(digit: string) {
     if (locked) return;
     setMessage("");
-    const next = entry + digit;
-    if (next.length === PIN_LENGTH) handleComplete(next);
-    else setEntry(next);
+    setEntry((e) => (e.length < PIN_LENGTH ? e + digit : e));
   }
 
   const prompt =
@@ -96,6 +95,7 @@ export default function PinScreen() {
       : mode === "confirm"
         ? "Enter the same four digits again."
         : "Parent Mode is for parents and teachers.";
+  const action = mode === "create" ? "Continue" : mode === "confirm" ? "Set PIN" : "Unlock";
 
   if (mode === "loading") return <Screen>{null}</Screen>;
 
@@ -103,18 +103,8 @@ export default function PinScreen() {
   const c = theme.colors;
 
   return (
-    <Screen style={{ alignItems: "center", justifyContent: "center", gap: space.xl }}>
-      <View style={{ alignItems: "center", gap: space.md }}>
-        <IconTile icon={LockKeyhole} size={52} />
-        <View style={{ alignItems: "center", gap: space.xs }}>
-          <AppText variant="title" style={{ textAlign: "center" }}>
-            {prompt}
-          </AppText>
-          <AppText muted variant="caption" style={{ textAlign: "center" }}>
-            {subtitle}
-          </AppText>
-        </View>
-      </View>
+    <Screen style={{ gap: space.xl }}>
+      <PageHeader icon={LockKeyhole} title={prompt} meta={subtitle} />
 
       <View style={{ alignItems: "center", gap: space.sm }}>
         <View
@@ -144,22 +134,18 @@ export default function PinScreen() {
         </AppText>
       </View>
 
+      {/* Flat keypad: no tiles, no frame -- digits on the page, divided by hairlines. */}
       <View style={styles.pad}>
         {keys.map((k, i) =>
           k === "" ? (
-            <View key={i} style={styles.key} />
+            <View key={i} style={[styles.key, keyDividers(i, c.divider)]} />
           ) : (
             <Pressable
               key={i}
               accessibilityRole="button"
               accessibilityLabel={k === "del" ? "Delete" : k}
               onPress={() => (k === "del" ? setEntry((e) => e.slice(0, -1)) : press(k))}
-              style={({ pressed }) => [
-                styles.key,
-                k === "del"
-                  ? { backgroundColor: pressed ? c.surfaceSunken : "transparent" }
-                  : [{ backgroundColor: pressed ? c.surfaceSunken : c.surface }, theme.elevation.card],
-              ]}
+              style={({ pressed }) => [styles.key, keyDividers(i, c.divider), { backgroundColor: pressed ? c.surfaceSunken : "transparent" }]}
             >
               {k === "del" ? (
                 <Icon icon={Delete} size={24} color={c.textMuted} />
@@ -170,13 +156,33 @@ export default function PinScreen() {
           )
         )}
       </View>
+
+      <Button
+        label={action}
+        icon={ArrowRight}
+        size="lg"
+        disabled={entry.length < PIN_LENGTH || locked}
+        onPress={() => handleComplete(entry)}
+        style={{ width: "100%", maxWidth: 300, alignSelf: "center" }}
+      />
     </Screen>
   );
+}
+
+const KEY_W = 96;
+
+/** Inner grid lines only (no outer frame), like a phone keypad. */
+function keyDividers(i: number, color: string) {
+  return {
+    borderColor: color,
+    borderRightWidth: i % 3 < 2 ? StyleSheet.hairlineWidth : 0,
+    borderBottomWidth: i < 9 ? StyleSheet.hairlineWidth : 0,
+  };
 }
 
 const styles = StyleSheet.create({
   dots: { flexDirection: "row", gap: 16 },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
-  pad: { flexDirection: "row", flexWrap: "wrap", width: 276, gap: 12, justifyContent: "center" },
-  key: { width: 84, height: 64, borderRadius: radius.lg, alignItems: "center", justifyContent: "center" },
+  pad: { flexDirection: "row", flexWrap: "wrap", width: KEY_W * 3, alignSelf: "center" },
+  key: { width: KEY_W, height: 60, alignItems: "center", justifyContent: "center" },
 });

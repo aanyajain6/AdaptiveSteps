@@ -26,6 +26,8 @@ import { CardOutcome, ReviewCard } from "../types/models";
 // Short sessions: retrieval practice works in small doses, and it's
 // better to stop while it still feels good.
 const MAX_CARDS_PER_SESSION = 10;
+/** Answers longer than this use the title size instead of display. */
+const LONG_ANSWER_CHARS = 24;
 
 type ViewMode = "all" | "current";
 
@@ -100,14 +102,14 @@ export default function Review() {
     advance(nowAnswered);
   }
 
-  if (!cards) return <Screen tone="page">{null}</Screen>;
+  if (!cards) return <Screen>{null}</Screen>;
 
-  const headerOptions = { title: "", headerStyle: { backgroundColor: c.page } };
+  const headerOptions = { title: "" };
 
   if (cards.length === 0 || finished) {
     const practiced = answered.length;
     return (
-      <Screen tone="page" style={{ justifyContent: "center" }}>
+      <Screen style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
         <View style={{ alignItems: "center", gap: space.lg, paddingVertical: space.xl }}>
           <View style={{ width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center", backgroundColor: c.surfaceSunken }}>
@@ -158,7 +160,7 @@ export default function Review() {
   );
 
   return (
-    <Screen tone="page" style={wide ? { maxWidth: MAX_WIDE_CONTENT_WIDTH } : undefined}>
+    <Screen style={wide ? { maxWidth: MAX_WIDE_CONTENT_WIDTH } : undefined}>
       <Stack.Screen options={headerOptions} />
       <View style={{ gap: space.md }}>
         <PageHeader
@@ -269,7 +271,8 @@ function CardDetail({
           <AppText variant="overline" muted>
             Answer
           </AppText>
-          <AppText variant="display">{card.back}</AppText>
+          {/* Short answers ("56", "Paris") read best huge; long ones step down so they stay scannable. */}
+          <AppText variant={card.back.length > LONG_ANSWER_CHARS ? "title" : "display"}>{card.back}</AppText>
         </View>
       ) : null}
 

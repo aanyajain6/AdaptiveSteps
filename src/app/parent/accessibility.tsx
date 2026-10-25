@@ -3,10 +3,12 @@
 // on their own so they're quick to adjust. Saving re-themes the
 // whole app immediately via AppProvider.
 
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
+import { Check, Eye } from "lucide-react-native";
 import { useState } from "react";
 import { PresentationFields, PresentationValues } from "../../components/PresentationFields";
-import { AppText, Button, Card, Screen } from "../../components/ui";
+import { FormSection, PageHeader } from "../../components/structure";
+import { AppText, Button, Screen } from "../../components/ui";
 import * as db from "../../lib/db";
 import { useApp } from "../../state/AppProvider";
 
@@ -38,14 +40,16 @@ export default function AccessibilitySettings() {
 
   return (
     <Screen>
-      <AppText muted>
-        How AdaptiveSteps looks for {activeChild.name}. This changes presentation only — it never
-        changes how much support the app gives.
-      </AppText>
-      <Card>
+      <Stack.Screen options={{ title: "" }} />
+      <PageHeader
+        icon={Eye}
+        title="Accessibility"
+        meta={`How AdaptiveSteps looks for ${activeChild.name}. Presentation only: it never changes how much support the app gives.`}
+      />
+      <FormSection title="Display">
         <PresentationFields value={values} onChange={setValues} />
-      </Card>
-      <Button label="Save" onPress={save} />
+      </FormSection>
+      <Button label="Save" icon={Check} size="lg" onPress={save} />
     </Screen>
   );
 }

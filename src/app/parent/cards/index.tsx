@@ -1,9 +1,9 @@
-import { router, useFocusEffect } from "expo-router";
+import { router, Stack, useFocusEffect } from "expo-router";
 import { Layers, Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { AppText, Button, ListGroup, ListRow, Screen, Section } from "../../../components/ui";
+import { PageHeader, StatusList, StatusRow } from "../../../components/structure";
+import { AppText, Button, Screen } from "../../../components/ui";
 import * as db from "../../../lib/db";
-import { CARD_TIER_LABELS } from "../../../lib/tiers";
 import { nowIso } from "../../../lib/time";
 import { useApp } from "../../../state/AppProvider";
 import { ReviewCard } from "../../../types/models";
@@ -11,7 +11,7 @@ import { ReviewCard } from "../../../types/models";
 function dueLabel(dueAt: string, now: string): string {
   if (dueAt <= now) return "Due now";
   const days = Math.ceil((Date.parse(dueAt) - Date.parse(now)) / (24 * 60 * 60 * 1000));
-  return days === 1 ? "Tomorrow" : `In ${days} days`;
+  return days === 1 ? "Due tomorrow" : `Due in ${days} days`;
 }
 
 export default function CardsList() {
@@ -29,9 +29,12 @@ export default function CardsList() {
     }, [activeChild])
   );
 
+  const header = <Stack.Screen options={{ title: "" }} />;
+
   if (!activeChild) {
     return (
       <Screen>
+        {header}
         <AppText muted>Create a child profile first, then add review cards for them here.</AppText>
       </Screen>
     );
@@ -39,33 +42,37 @@ export default function CardsList() {
 
   return (
     <Screen>
-      <AppText muted>
-        Each card returns on its own schedule: sooner when it was tricky, later when it was easy.
-      </AppText>
-
-      {cards.length > 0 && (
-        <Section title={`${activeChild.name}'s cards`}>
-          <ListGroup>
-            {cards.map((card) => (
-              <ListRow
-                key={card.id}
-                icon={Layers}
-                title={card.front || "Photo card"}
-                subtitle={`${card.subject ? `${card.subject} · ` : ""}${CARD_TIER_LABELS[card.supportTier]}`}
-                trailing={dueLabel(card.dueAt, now)}
-                accessibilityHint="Edit this card"
-                onPress={() => router.push({ pathname: "/parent/cards/[id]", params: { id: card.id } })}
-              />
-            ))}
-          </ListGroup>
-        </Section>
-      )}
+      {header}
+      <PageHeader
+        icon={Layers}
+        title="Review cards"
+        meta={`${activeChild.name} · Each card returns sooner when it was tricky, later when it was easy.`}
+      />
 
       <Button
         label="New card"
         icon={Plus}
+        size="lg"
         onPress={() => router.push({ pathname: "/parent/cards/[id]", params: { id: "new" } })}
       />
+
+      {cards.length > 0 ? (
+        <StatusList>
+          {cards.map((card) => (
+            <StatusRow
+              key={card.id}
+              icon={Layers}
+              title={card.front || "Photo card"}
+              meta={[card.subject, dueLabel(card.dueAt, now)].filter(Boolean).join(" · ")}
+              status={card.supportTier > 0 ? "extra_support" : undefined}
+              accessibilityHint="Edit this card"
+              onPress={() => router.push({ pathname: "/parent/cards/[id]", params: { id: card.id } })}
+            />
+          ))}
+        </StatusList>
+      ) : (
+        <AppText muted>No cards yet.</AppText>
+      )}
     </Screen>
   );
 }

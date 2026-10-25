@@ -3,9 +3,12 @@
 // "level". Support is decided per step from how the child does.
 
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { AudioLines, Image as ImageIcon, Trash2, Type } from "lucide-react-native";
+import { AudioLines, Check, Image as ImageIcon, Trash2, Type, UserRound, UserRoundCheck } from "lucide-react-native";
+import { View } from "react-native";
+import { FormSection, PageHeader } from "../../../components/structure";
 import { useEffect, useState } from "react";
-import { AppText, Button, Card, Field, OptionGroup, Screen, Section } from "../../../components/ui";
+import { AppText, Button, Field, OptionGroup, Screen } from "../../../components/ui";
+import { space } from "../../../theme/theme";
 import { PresentationFields, PresentationValues } from "../../../components/PresentationFields";
 import { confirm } from "../../../lib/confirm";
 import * as db from "../../../lib/db";
@@ -99,41 +102,57 @@ export default function EditChild() {
 
   if (!loaded) return <Screen>{null}</Screen>;
 
+  const isActive = existing && existing.id === activeChild?.id;
+
   return (
     <Screen>
-      <Stack.Screen options={{ title: isNew ? "New profile" : `Edit ${existing?.name ?? "profile"}` }} />
+      <Stack.Screen options={{ title: "" }} />
+      <PageHeader
+        icon={UserRound}
+        title={isNew ? "New profile" : `Edit ${existing?.name ?? "profile"}`}
+        meta={isNew ? "No diagnosis or labels here, by design. Support adapts to how they actually do." : isActive ? "In Child Mode now" : undefined}
+      />
 
-      <Section title="About">
-        <Card>
-          <Field
-            label="Name"
-            value={name}
-            onChangeText={(t) => {
-              setName(t);
-              setError("");
+      <FormSection title="About">
+        <Field
+          label="Name"
+          value={name}
+          onChangeText={(t) => {
+            setName(t);
+            setError("");
+          }}
+          placeholder="First name or nickname"
+          autoCapitalize="words"
+          maxLength={40}
+        />
+        {error ? (
+          <AppText accessibilityLiveRegion="polite" variant="caption" style={{ color: theme.colors.danger }}>
+            {error}
+          </AppText>
+        ) : null}
+        <OptionGroup label="Age" options={AGE_BANDS} value={ageBand} onChange={setAgeBand} />
+        <OptionGroup label="Learns best with" options={FORMATS} value={format} onChange={setFormat} />
+      </FormSection>
+
+      <FormSection title="Display">
+        <PresentationFields value={presentation} onChange={setPresentation} />
+      </FormSection>
+
+      <View style={{ gap: space.sm }}>
+        <Button label={isNew ? "Create profile" : "Save"} icon={Check} size="lg" onPress={save} />
+        {existing && !isActive ? (
+          <Button
+            label="Use in Child Mode"
+            icon={UserRoundCheck}
+            variant="outline"
+            onPress={async () => {
+              await setActiveChild(existing.id);
+              router.back();
             }}
-            placeholder="First name or nickname"
-            autoCapitalize="words"
-            maxLength={40}
           />
-          {error ? (
-            <AppText accessibilityLiveRegion="polite" variant="caption" style={{ color: theme.colors.danger }}>
-              {error}
-            </AppText>
-          ) : null}
-          <OptionGroup label="Age" options={AGE_BANDS} value={ageBand} onChange={setAgeBand} />
-          <OptionGroup label="Learns best with" options={FORMATS} value={format} onChange={setFormat} />
-        </Card>
-      </Section>
-
-      <Section title="Display">
-        <Card>
-          <PresentationFields value={presentation} onChange={setPresentation} />
-        </Card>
-      </Section>
-
-      <Button label={isNew ? "Create profile" : "Save changes"} size="lg" onPress={save} />
-      {existing && <Button label="Delete profile" icon={Trash2} variant="danger" onPress={remove} />}
+        ) : null}
+        {existing && <Button label="Delete profile" icon={Trash2} variant="danger" onPress={remove} />}
+      </View>
     </Screen>
   );
 }

@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { PhotoField } from "../../../components/PhotoField";
-import { AppText, Badge, Button, Card, Field, Screen, Section } from "../../../components/ui";
+import { AppText, Button, Card, Field, Screen, Section } from "../../../components/ui";
 import { confirm } from "../../../lib/confirm";
 import * as db from "../../../lib/db";
 import { deletePhoto } from "../../../lib/photos";
@@ -138,7 +138,7 @@ export default function EditSession() {
                 </View>
                 <AppText variant="heading">Step {i + 1}</AppText>
               </View>
-              <Badge label={`Support: ${TIER_LABELS[step.supportTier]}`} tone="neutral" />
+              <AppText variant="caption" muted>{`Support: ${TIER_LABELS[step.supportTier]}`}</AppText>
             </View>
             <Field
               label={`Step ${i + 1} label`}
@@ -168,8 +168,8 @@ export default function EditSession() {
               onChange={(photoUri) => updateStep(step.id, { photoUri })}
             />
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Button label="Move up" icon={ArrowUp} variant="secondary" disabled={i === 0} onPress={() => moveStep(i, -1)} style={{ flex: 1 }} />
-              <Button label="Move down" icon={ArrowDown} variant="secondary" disabled={i === steps.length - 1} onPress={() => moveStep(i, 1)} style={{ flex: 1 }} />
+              <Button label="Move up" icon={ArrowUp} variant="outline" disabled={i === 0} onPress={() => moveStep(i, -1)} style={{ flex: 1 }} />
+              <Button label="Move down" icon={ArrowDown} variant="outline" disabled={i === steps.length - 1} onPress={() => moveStep(i, 1)} style={{ flex: 1 }} />
             </View>
             <Button
               label={`Remove step ${i + 1}`}
@@ -181,7 +181,7 @@ export default function EditSession() {
           </Card>
         ))}
 
-        <Button label="Add step" icon={Plus} variant="secondary" onPress={() => setSteps((all) => [...all, blankStep()])} />
+        <Button label="Add step" icon={Plus} variant="outline" onPress={() => setSteps((all) => [...all, blankStep()])} />
       </Section>
 
       {error ? (
