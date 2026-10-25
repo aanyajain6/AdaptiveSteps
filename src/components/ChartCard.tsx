@@ -47,7 +47,7 @@ export function ChartCard({
 }) {
   const [showTable, setShowTable] = useState(false);
   return (
-    <Card>
+    <Card flat>
       <View style={{ gap: space.xs }}>
         <AppText variant="heading">{title}</AppText>
         <AppText variant="caption" muted>

@@ -16,8 +16,8 @@ import {
   CirclePlus,
   CircleQuestionMark,
 } from "lucide-react-native";
-import React, { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { STEP_STATUS_LABELS, StepStatus } from "../lib/presentation";
 import { useAppTheme } from "../state/AppProvider";
 import { MIN_TOUCH, radius, space } from "../theme/theme";
@@ -72,16 +72,26 @@ export function Dropdown<T extends string>({
 }) {
   const theme = useAppTheme();
   const c = theme.colors;
-  const [open, setOpen] = useState(false);
+  const { width: windowWidth } = useWindowDimensions();
+  const [anchor, setAnchor] = useState<{ x: number; y: number; width: number } | null>(null);
+  const trigger = useRef<React.ComponentRef<typeof View>>(null);
   const current = options.find((o) => o.value === value)?.label ?? "";
+  const open = anchor !== null;
+  const close = () => setAnchor(null);
+
+  function openMenu() {
+    // Anchor the panel directly under the control, like a native select.
+    trigger.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y: y + height + 4, width }));
+  }
 
   return (
     <>
       <Pressable
+        ref={trigger}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${current}`}
         accessibilityHint="Opens a list of options"
-        onPress={() => setOpen(true)}
+        onPress={openMenu}
         style={({ pressed }) => [
           styles.dropdown,
           {
@@ -96,19 +106,18 @@ export function Dropdown<T extends string>({
         <Icon icon={ChevronDown} size={16} color={c.textMuted} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType={theme.reduceMotion ? "none" : "fade"} onRequestClose={() => setOpen(false)}>
-        <Pressable
-          accessibilityLabel="Close"
-          onPress={() => setOpen(false)}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.25)", justifyContent: "center", padding: space.xl }}
-        >
+      <Modal visible={open} transparent animationType="none" onRequestClose={close}>
+        {/* Transparent backdrop: closes on outside tap. No scrim, no shadow -- a flat bordered panel. */}
+        <Pressable accessibilityLabel="Close" onPress={close} style={{ flex: 1 }}>
           <View
             accessibilityRole="menu"
             style={{
-              alignSelf: "center",
-              width: "100%",
-              maxWidth: 360,
-              borderRadius: radius.md,
+              position: "absolute",
+              top: anchor?.y ?? 0,
+              // Right-align with the trigger, never narrower than it, never off-screen.
+              right: Math.max(space.sm, windowWidth - (anchor ? anchor.x + anchor.width : windowWidth)),
+              minWidth: Math.max(220, anchor?.width ?? 0),
+              borderRadius: radius.sm,
               backgroundColor: c.page,
               borderWidth: theme.borderWidth,
               borderColor: c.borderStrong,
@@ -128,7 +137,7 @@ export function Dropdown<T extends string>({
                   accessibilityLabel={o.label}
                   onPress={() => {
                     onChange(o.value);
-                    setOpen(false);
+                    close();
                   }}
                   style={({ pressed }) => ({
                     minHeight: MIN_TOUCH,
@@ -253,7 +262,10 @@ export function Stepper({
   currentKey,
   onSelect,
   renderExpanded,
+  noun = "Step",
 }: {
+  /** What each item is called for assistive tech ("Step 2", "Card 2"). */
+  noun?: string;
   items: StepperItem[];
   currentKey: string;
   onSelect?: (key: string) => void;
@@ -307,7 +319,8 @@ export function Stepper({
                 disabled={!onSelect || isCurrent}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isCurrent }}
-                accessibilityLabel={`Step ${item.number}: ${item.title}. ${STATUS[item.status].label}.`}
+                // "current" is in the label because web drops the selected state on buttons.
+                accessibilityLabel={`${noun} ${item.number}${isCurrent ? ", current" : ""}: ${item.title}. ${STATUS[item.status].label}.`}
                 accessibilityHint={isCurrent ? undefined : "Go to this step"}
                 onPress={() => onSelect?.(item.key)}
                 style={({ pressed }) => [styles.stepHead, { opacity: pressed ? 0.7 : 1 }]}

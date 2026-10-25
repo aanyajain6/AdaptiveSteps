@@ -1,7 +1,7 @@
 // Parent Mode gate. A 4-digit PIN keeps curious kids out of the
 // settings; it is NOT authentication and isn't meant to be.
 
-import { router } from "expo-router";
+import { Href, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Delete, LockKeyhole } from "lucide-react-native";
@@ -17,6 +17,7 @@ const LOCKOUT_MS = 30_000;
 type Mode = "loading" | "enter" | "create" | "confirm";
 
 export default function PinScreen() {
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const { unlockParent, theme } = useApp();
   const [mode, setMode] = useState<Mode>("loading");
   const [savedPin, setSavedPin] = useState<string | null>(null);
@@ -44,7 +45,8 @@ export default function PinScreen() {
 
   function enterParentMode() {
     unlockParent();
-    router.replace("/parent");
+    // Only Parent Mode routes are valid destinations.
+    router.replace((next?.startsWith("/parent") ? next : "/parent") as Href);
   }
 
   async function handleComplete(pin: string) {

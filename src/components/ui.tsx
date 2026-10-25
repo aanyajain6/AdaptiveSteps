@@ -208,7 +208,6 @@ export function Button({
         },
         variant === "secondary" && theme.elevation.card,
         variant === "outline" && { borderWidth: theme.borderWidth, borderColor: c.borderStrong },
-        variant === "primary" && !theme.highContrast && { boxShadow: "0px 1px 2px rgba(15, 110, 100, 0.25)" },
         style,
       ]}
     >
@@ -224,18 +223,25 @@ export function Card({
   children,
   style,
   raised,
+  flat,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   raised?: boolean;
+  /** Border only, no shadow -- for the structured list/stepper pattern. */
+  flat?: boolean;
 }) {
   const theme = useAppTheme();
   return (
     <View
       style={[
         styles.card,
-        { backgroundColor: theme.colors.surface, borderRadius: radius.lg },
-        raised ? theme.elevation.raised : theme.elevation.card,
+        { backgroundColor: flat ? theme.colors.page : theme.colors.surface, borderRadius: flat ? radius.sm : radius.lg },
+        flat
+          ? { borderWidth: theme.borderWidth, borderColor: theme.colors.divider }
+          : raised
+            ? theme.elevation.raised
+            : theme.elevation.card,
         style,
       ]}
     >

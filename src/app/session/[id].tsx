@@ -32,7 +32,7 @@ import {
   Volume2,
 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Celebration, CELEBRATION_MS } from "../../components/Celebration";
 import { MoodCheckIn } from "../../components/MoodCheckIn";
 import { Dropdown, PageHeader, Stepper, StepperItem } from "../../components/structure";
@@ -43,15 +43,12 @@ import { boostedTier, nextUnfinished, presentStep, stepStatuses } from "../../li
 import { speak, stopSpeaking } from "../../lib/speech";
 import { nowIso, nowMs } from "../../lib/time";
 import { useApp, useAppTheme } from "../../state/AppProvider";
-import { radius, space } from "../../theme/theme";
+import { MAX_WIDE_CONTENT_WIDTH, radius, space, TABLET_BREAKPOINT } from "../../theme/theme";
 import { ChoiceResponse, Mood, SessionAttempt, StudySession } from "../../types/models";
 
 type Phase = "loading" | "missing" | "moodBefore" | "step" | "celebrate" | "break" | "moodAfter" | "finished";
 type StepLog = SessionAttempt["stepLogs"][number];
 type ViewMode = "all" | "current";
-
-/** Side-by-side stepper and step detail from this width up (tablets, web). */
-const WIDE_BREAKPOINT = 820;
 
 const CHOICES: { value: ChoiceResponse; icon: LucideIcon; label: string; reply?: string }[] = [
   { value: "yes", icon: ThumbsUp, label: "Yes", reply: "Okay!" },
@@ -65,7 +62,7 @@ export default function SessionRunner() {
   const { activeChild, theme } = useApp();
   const c = theme.colors;
   const { width } = useWindowDimensions();
-  const wide = width >= WIDE_BREAKPOINT;
+  const wide = width >= TABLET_BREAKPOINT;
 
   const [session, setSession] = useState<StudySession | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -225,7 +222,7 @@ export default function SessionRunner() {
     return (
       <Screen tone="page">
         <AppText>{"This session isn't available anymore."}</AppText>
-        <Button label="Go back" variant="ink" onPress={() => router.back()} />
+        <Button label="Go back" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -248,7 +245,7 @@ export default function SessionRunner() {
       <Screen tone="page" style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
         <Moment icon={PartyPopper} title="All done!" body={`You finished ${title}.`} />
-        <Button label="Back home" icon={House} variant="ink" size="lg" onPress={() => router.dismissTo("/")} />
+        <Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />
       </Screen>
     );
   }
@@ -258,7 +255,7 @@ export default function SessionRunner() {
       <Screen tone="page" style={{ justifyContent: "center" }}>
         <Stack.Screen options={headerOptions} />
         <Moment icon={Coffee} title="Break time" body="Take your time. Stretch, get some water, or take a few slow breaths." />
-        <Button label="I'm ready" icon={Play} variant="ink" size="lg" onPress={endBreak} />
+        <Button label="I'm ready" icon={Play} size="lg" onPress={endBreak} />
       </Screen>
     );
   }
@@ -325,7 +322,7 @@ export default function SessionRunner() {
   );
 
   return (
-    <Screen tone="page" style={wide ? { maxWidth: 1040 } : undefined}>
+    <Screen tone="page" style={wide ? { maxWidth: MAX_WIDE_CONTENT_WIDTH } : undefined}>
       <Stack.Screen options={headerOptions} />
       {header}
       {wide ? (
@@ -345,7 +342,12 @@ export default function SessionRunner() {
   );
 }
 
-/** The active step's support and actions. Accent color is kept off the buttons on purpose. */
+/**
+ * The active step's support and actions. Two input modes, one help path:
+ * the main buttons, and below a divider, the point-to-answer board (AAC
+ * style, for kids who answer by pointing rather than talking). Its "Help"
+ * tile calls the same needHelp() as the "I need help" button.
+ */
 function StepDetail({
   celebrating,
   showHint,
@@ -418,7 +420,6 @@ function StepDetail({
         <Button
           label={alreadyDone ? "Next step" : "Done"}
           icon={alreadyDone ? ArrowRight : Check}
-          variant="ink"
           size="lg"
           onPress={onDone}
         />
@@ -428,11 +429,18 @@ function StepDetail({
         </View>
       </View>
 
-      {/* Choice board for kids who'd rather point than talk. */}
-      <View style={{ gap: space.sm }}>
-        <AppText variant="overline" muted>
-          Or point to answer
-        </AppText>
+      {/* Point-to-answer board: a separate, AAC-style way to respond. */}
+      <View
+        accessibilityRole="none"
+        accessibilityLabel="Answer by pointing"
+        style={{ gap: space.sm, paddingTop: space.lg, borderTopWidth: theme.highContrast ? 1 : StyleSheet.hairlineWidth, borderTopColor: c.divider }}
+      >
+        <View style={{ gap: 2 }}>
+          <AppText variant="label">Answer by pointing</AppText>
+          <AppText variant="caption" muted>
+            Tap a picture to say yes, no, more time, or help.
+          </AppText>
+        </View>
         <View style={{ flexDirection: "row", gap: space.sm }}>
           {CHOICES.map((ch) => (
             <Pressable
@@ -447,9 +455,10 @@ function StepDetail({
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: radius.sm,
-                borderWidth: theme.borderWidth,
-                borderColor: c.borderStrong,
-                backgroundColor: pressed ? c.surfaceSunken : c.page,
+                // Filled, borderless tiles: visibly a different control family from the outlined action buttons.
+                borderWidth: theme.highContrast ? 1 : 0,
+                borderColor: c.border,
+                backgroundColor: pressed ? c.border : c.surfaceSunken,
               })}
             >
               <Icon icon={ch.icon} size={20} color={c.text} />

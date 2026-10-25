@@ -52,6 +52,11 @@ export interface ThemeColors {
   onInk: string;
   link: string;
   divider: string;
+  // Tablet nav rail.
+  rail: string;
+  onRail: string;
+  onRailMuted: string;
+  railAccent: string;
   success: string;
   warning: string;
   onWarning: string;
@@ -76,6 +81,10 @@ const standard: ThemeColors = {
   onInk: neutral[0],
   link: brand[600],
   divider: "#E6E6E3",
+  rail: "#16213A", // navy
+  onRail: neutral[0], // 16:1
+  onRailMuted: "#A9B4C8", // 7.7:1
+  railAccent: brand[500], // 4.2:1, above the 3:1 non-text minimum
   success: "#2F7D4F",
   warning: "#E9B949",
   onWarning: neutral[900],
@@ -101,6 +110,10 @@ const highContrast: ThemeColors = {
   onInk: "#000000",
   link: "#FFD600",
   divider: "#FFFFFF",
+  rail: "#000000",
+  onRail: "#FFFFFF",
+  onRailMuted: "#FFFFFF",
+  railAccent: "#FFD600",
   success: "#5CFF8F",
   warning: "#FFD600",
   onWarning: "#000000",
@@ -137,6 +150,10 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 export const radius = { sm: 8, md: 12, lg: 16, pill: 999 } as const;
 /** Content never stretches past this on tablets/web. */
 export const MAX_CONTENT_WIDTH = 560;
+/** From this width up: tablet layout (nav rail, side-by-side stepper and detail). */
+export const TABLET_BREAKPOINT = 820;
+/** Content width for side-by-side tablet layouts. */
+export const MAX_WIDE_CONTENT_WIDTH = 1040;
 /** Minimum touch target -- above the 44/48pt platform minimums, on purpose. */
 export const MIN_TOUCH = 48;
 

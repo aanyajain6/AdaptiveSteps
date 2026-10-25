@@ -11,8 +11,9 @@ import { useWindowDimensions, View } from "react-native";
 import { BarChart, LineChart } from "react-native-chart-kit/v2";
 import { ChartCard, chartTheme } from "../../components/ChartCard";
 import { MOODS } from "../../components/MoodCheckIn";
-import { Check, Info, ShieldCheck } from "lucide-react-native";
-import { AppText, Badge, Button, Card, Icon, IconTile, Screen, Section } from "../../components/ui";
+import { ChartLine, Check, ClipboardList, Info, Layers } from "lucide-react-native";
+import { PageHeader, StatusList, StatusRow } from "../../components/structure";
+import { AppText, Button, Card, Icon, Screen, Section } from "../../components/ui";
 import { approveAdjustment, declineAdjustment, isPending } from "../../lib/adaptation";
 import * as db from "../../lib/db";
 import {
@@ -55,6 +56,8 @@ export default function Dashboard() {
   const { width } = useWindowDimensions();
   const [data, setData] = useState<Data | null>(null);
   const [notice, setNotice] = useState("");
+  /** Which pending row is expanded; null = default to the first, "" = all collapsed. */
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!activeChild) return;
@@ -147,51 +150,51 @@ export default function Dashboard() {
   const recent = [...data.attempts].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 5);
 
   return (
-    <Screen>
-      <View style={{ gap: space.xs }}>
-        <AppText variant="overline" muted>
-          Learner
-        </AppText>
-        <AppText variant="display">{activeChild.name}</AppText>
-      </View>
+    <Screen tone="page">
+      <PageHeader icon={ChartLine} title="Progress" meta={`${activeChild.name} · Every change below includes the reason it was made`} />
 
-      {/* ---- Needs your review ---- */}
+      {/* ---- Needs your review: same status-row pattern as the child's lists ---- */}
       {pending.length > 0 && (
-        <Card raised style={{ gap: space.lg }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
-            <IconTile icon={ShieldCheck} />
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText variant="heading">Needs your review</AppText>
-              <AppText variant="caption" muted>
-                Support is only reduced with your approval.
-              </AppText>
-            </View>
-            <Badge label={String(pending.length)} />
+        <View style={{ gap: space.sm }}>
+          <View style={{ gap: 2 }}>
+            <AppText variant="heading">Needs your review ({pending.length})</AppText>
+            <AppText variant="caption" muted>
+              Support is only reduced with your approval. Tap a row to see why.
+            </AppText>
           </View>
-          {pending.map((adj) => (
-            <View
-              key={adj.id}
-              style={{ gap: space.sm, paddingTop: space.lg, borderTopWidth: 1, borderTopColor: theme.colors.border }}
-            >
-              <AppText variant="label">{itemName(adj)}</AppText>
-              <AppText>{adj.reason}</AppText>
-              <AppText variant="caption" muted>
-                {tierName(adj, adj.fromTier)} → {tierName(adj, adj.toTier)} · Suggested {shortDate(adj.createdAt)}
-              </AppText>
-              <View style={{ flexDirection: "row", gap: space.sm, paddingTop: space.xs }}>
-                <Button label="Approve" icon={Check} onPress={() => approve(adj)} style={{ flex: 1 }} />
-                <Button label="Not yet" variant="secondary" onPress={() => decline(adj)} style={{ flex: 1 }} />
-              </View>
-            </View>
-          ))}
-        </Card>
+          <StatusList>
+            {pending.map((adj) => {
+              const expanded = (openId ?? pending[0].id) === adj.id;
+              return (
+                <View key={adj.id}>
+                  <StatusRow
+                    icon={adj.itemType === "review_card" ? Layers : ClipboardList}
+                    title={itemName(adj)}
+                    meta={`${tierName(adj, adj.fromTier)} → ${tierName(adj, adj.toTier)} · Suggested ${shortDate(adj.createdAt)}`}
+                    status="extra_support"
+                    onPress={() => setOpenId(expanded ? "" : adj.id)}
+                  />
+                  {expanded ? (
+                    <View style={{ gap: space.md, paddingLeft: 34, paddingBottom: space.lg }}>
+                      <AppText>{adj.reason}</AppText>
+                      <View style={{ flexDirection: "row", gap: space.sm }}>
+                        <Button label="Approve" icon={Check} onPress={() => approve(adj)} style={{ flex: 1 }} />
+                        <Button label="Not yet" variant="outline" onPress={() => decline(adj)} style={{ flex: 1 }} />
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </StatusList>
+        </View>
       )}
       {notice ? (
         <View
           accessibilityLiveRegion="polite"
-          style={{ flexDirection: "row", gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: theme.colors.primarySoft }}
+          style={{ flexDirection: "row", gap: space.sm, padding: space.md, borderRadius: radius.sm, backgroundColor: theme.colors.surfaceSunken }}
         >
-          <Icon icon={Info} size={18} color={theme.colors.primary} />
+          <Icon icon={Info} size={18} color={theme.colors.textMuted} />
           <AppText variant="caption" style={{ flex: 1, color: theme.colors.text }}>
             {notice}
           </AppText>
@@ -245,7 +248,7 @@ export default function Dashboard() {
           />
         </ChartCard>
 
-        <Card>
+        <Card flat>
           <View style={{ gap: space.xs }}>
             <AppText variant="heading">Hardest steps</AppText>
             <AppText variant="caption" muted>
@@ -344,7 +347,7 @@ export default function Dashboard() {
 
       {/* ---- Recent sessions with mood ---- */}
       <Section title="Activity">
-        <Card>
+        <Card flat>
           <AppText variant="heading">Recent sessions</AppText>
           {recent.length === 0 && <AppText muted>No sessions yet.</AppText>}
           {recent.map((a) => {
@@ -373,7 +376,7 @@ export default function Dashboard() {
         </Card>
 
         {/* ---- Explainable log ---- */}
-        <Card>
+        <Card flat>
           <AppText variant="heading">Why support changed</AppText>
           {history.length === 0 && <AppText muted>No changes yet.</AppText>}
           {history.map((adj) => (
@@ -394,7 +397,7 @@ export default function Dashboard() {
 
 function StatTile({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <Card style={{ flex: 1, gap: space.xs }}>
+    <Card flat style={{ flex: 1, gap: space.xs }}>
       <AppText variant="caption" muted>
         {label}
       </AppText>
