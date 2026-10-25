@@ -1,18 +1,22 @@
-// Session builder. Steps keep their ids across edits so a step's
-// history (and its support tier) survives renaming or reordering.
+// Session builder. Steps are authored on the same numbered rail the
+// child will see (variant "authoring": order only, no progress), one
+// step expanded for editing at a time. Steps keep their ids across
+// edits so a step's history (and its support tier) survives renaming
+// or reordering.
 
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react-native";
+import { ArrowDown, ArrowUp, Check, ClipboardList, Plus, Trash2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { PhotoField } from "../../../components/PhotoField";
-import { AppText, Button, Card, Field, Screen, Section } from "../../../components/ui";
+import { FormSection, PageHeader, Stepper, StepperItem } from "../../../components/structure";
+import { AppText, Button, Field, Screen } from "../../../components/ui";
 import { confirm } from "../../../lib/confirm";
 import * as db from "../../../lib/db";
 import { deletePhoto } from "../../../lib/photos";
 import { DEFAULT_STEP_TIER, TIER_LABELS } from "../../../lib/tiers";
 import { useApp } from "../../../state/AppProvider";
-import { radius, space } from "../../../theme/theme";
+import { space } from "../../../theme/theme";
 import { SessionStep, StudySession } from "../../../types/models";
 
 function blankStep(): SessionStep {
@@ -29,6 +33,8 @@ export default function EditSession() {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [steps, setSteps] = useState<SessionStep[]>(() => [blankStep()]);
+  /** The one step expanded for editing. */
+  const [editingId, setEditingId] = useState<string>(() => steps[0]?.id ?? "");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -38,7 +44,9 @@ export default function EditSession() {
         setExisting(s);
         setTitle(s.title);
         setSubject(s.subject);
-        setSteps(s.steps.length ? s.steps : [blankStep()]);
+        const loadedSteps = s.steps.length ? s.steps : [blankStep()];
+        setSteps(loadedSteps);
+        setEditingId(loadedSteps[0].id);
       }
       setLoaded(true);
     });
@@ -100,97 +108,113 @@ export default function EditSession() {
     router.back();
   }
 
+  function addStep() {
+    const step = blankStep();
+    setSteps((all) => [...all, step]);
+    setEditingId(step.id);
+  }
+
+  function removeStep(index: number) {
+    const remaining = steps.filter((_, i) => i !== index);
+    setSteps(remaining);
+    setEditingId(remaining[Math.min(index, remaining.length - 1)].id);
+  }
+
   if (!loaded) return <Screen>{null}</Screen>;
+
+  const items: StepperItem[] = steps.map((st, i) => ({
+    key: st.id,
+    number: i + 1,
+    title: st.label.trim() || "Untitled step",
+    meta: [st.subjectTag, st.hint ? "Reminder" : null, st.photoUri ? "Photo" : null, `Support: ${TIER_LABELS[st.supportTier]}`]
+      .filter(Boolean)
+      .join(" · "),
+  }));
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: isNew ? "New session" : "Edit session" }} />
+      <Stack.Screen options={{ title: "" }} />
+      <PageHeader
+        icon={ClipboardList}
+        title={isNew ? "New session" : "Edit session"}
+        meta={`${steps.length} ${steps.length === 1 ? "step" : "steps"} · Shown to ${activeChild?.name ?? "your child"} one at a time and read aloud`}
+      />
 
-      <Section title="Details">
-        <Card>
-          <Field label="Title" value={title} onChangeText={(t) => { setTitle(t); setError(""); }} placeholder="e.g. Fractions worksheet" maxLength={80} />
-          <Field label="Subject" value={subject} onChangeText={setSubject} placeholder="e.g. Math" maxLength={40} />
-        </Card>
-      </Section>
+      <FormSection title="Details">
+        <Field label="Title" value={title} onChangeText={(t) => { setTitle(t); setError(""); }} placeholder="e.g. Fractions worksheet" maxLength={80} />
+        <Field label="Subject" value={subject} onChangeText={setSubject} placeholder="e.g. Math" maxLength={40} />
+      </FormSection>
 
-      <Section title="Steps">
-        <AppText variant="caption" muted style={{ paddingHorizontal: space.xs }}>
-          Shown one at a time and read aloud. Keep each step small and concrete.
+      <FormSection title="Steps">
+        <AppText variant="caption" muted>
+          Keep each step small and concrete. Tap a step to edit it.
         </AppText>
-
-        {steps.map((step, i) => (
-          <Card key={step.id}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-                <View
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: radius.pill,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: theme.colors.primary,
-                  }}
-                >
-                  <AppText variant="caption" style={{ color: theme.colors.onPrimary }}>
-                    {i + 1}
-                  </AppText>
+        <Stepper
+          variant="authoring"
+          selectHint="Edit this step"
+          items={items}
+          currentKey={editingId}
+          onSelect={setEditingId}
+          renderExpanded={(item) => {
+            const i = item.number - 1;
+            const step = steps[i];
+            return (
+              <View style={{ gap: space.md }}>
+                <Field
+                  label={`Step ${i + 1} label`}
+                  value={step.label}
+                  onChangeText={(label) => updateStep(step.id, { label })}
+                  placeholder="e.g. Get out your worksheet"
+                  maxLength={120}
+                />
+                <Field
+                  label={`Step ${i + 1} reminder (optional)`}
+                  value={step.hint ?? ""}
+                  onChangeText={(hint) => updateStep(step.id, { hint })}
+                  placeholder="e.g. It's the blue folder in your backpack"
+                  maxLength={200}
+                  multiline
+                />
+                <Field
+                  label={`Step ${i + 1} subject tag (optional)`}
+                  value={step.subjectTag ?? ""}
+                  onChangeText={(subjectTag) => updateStep(step.id, { subjectTag })}
+                  placeholder="e.g. Reading"
+                  maxLength={40}
+                />
+                <PhotoField
+                  label={`Step ${i + 1} photo (optional)`}
+                  uri={step.photoUri}
+                  onChange={(photoUri) => updateStep(step.id, { photoUri })}
+                />
+                <View style={{ flexDirection: "row", gap: space.sm }}>
+                  <Button label="Move up" icon={ArrowUp} variant="outline" disabled={i === 0} onPress={() => moveStep(i, -1)} style={{ flex: 1 }} />
+                  <Button label="Move down" icon={ArrowDown} variant="outline" disabled={i === steps.length - 1} onPress={() => moveStep(i, 1)} style={{ flex: 1 }} />
                 </View>
-                <AppText variant="heading">Step {i + 1}</AppText>
+                <Button
+                  label={`Remove step ${i + 1}`}
+                  icon={Trash2}
+                  variant="danger"
+                  disabled={steps.length === 1}
+                  onPress={() => removeStep(i)}
+                  style={{ alignSelf: "flex-start", paddingHorizontal: 0 }}
+                />
               </View>
-              <AppText variant="caption" muted>{`Support: ${TIER_LABELS[step.supportTier]}`}</AppText>
-            </View>
-            <Field
-              label={`Step ${i + 1} label`}
-              value={step.label}
-              onChangeText={(label) => updateStep(step.id, { label })}
-              placeholder="e.g. Get out your worksheet"
-              maxLength={120}
-            />
-            <Field
-              label={`Step ${i + 1} reminder (optional)`}
-              value={step.hint ?? ""}
-              onChangeText={(hint) => updateStep(step.id, { hint })}
-              placeholder="e.g. It's the blue folder in your backpack"
-              maxLength={200}
-              multiline
-            />
-            <Field
-              label={`Step ${i + 1} subject tag (optional)`}
-              value={step.subjectTag ?? ""}
-              onChangeText={(subjectTag) => updateStep(step.id, { subjectTag })}
-              placeholder="e.g. Reading"
-              maxLength={40}
-            />
-            <PhotoField
-              label={`Step ${i + 1} photo (optional)`}
-              uri={step.photoUri}
-              onChange={(photoUri) => updateStep(step.id, { photoUri })}
-            />
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <Button label="Move up" icon={ArrowUp} variant="outline" disabled={i === 0} onPress={() => moveStep(i, -1)} style={{ flex: 1 }} />
-              <Button label="Move down" icon={ArrowDown} variant="outline" disabled={i === steps.length - 1} onPress={() => moveStep(i, 1)} style={{ flex: 1 }} />
-            </View>
-            <Button
-              label={`Remove step ${i + 1}`}
-              icon={Trash2}
-              variant="danger"
-              disabled={steps.length === 1}
-              onPress={() => setSteps((all) => all.filter((s) => s.id !== step.id))}
-            />
-          </Card>
-        ))}
-
-        <Button label="Add step" icon={Plus} variant="outline" onPress={() => setSteps((all) => [...all, blankStep()])} />
-      </Section>
+            );
+          }}
+        />
+        <Button label="Add step" icon={Plus} variant="outline" onPress={addStep} />
+      </FormSection>
 
       {error ? (
         <AppText accessibilityLiveRegion="polite" style={{ color: theme.colors.danger }}>
           {error}
         </AppText>
       ) : null}
-      <Button label={isNew ? "Create session" : "Save session"} size="lg" onPress={save} />
-      {existing && <Button label="Delete session" icon={Trash2} variant="danger" onPress={remove} />}
+      <View style={{ gap: space.sm }}>
+        <Button label={isNew ? "Create session" : "Save session"} icon={Check} size="lg" onPress={save} />
+        {existing && <Button label="Delete session" icon={Trash2} variant="danger" onPress={remove} />}
+      </View>
     </Screen>
   );
 }
