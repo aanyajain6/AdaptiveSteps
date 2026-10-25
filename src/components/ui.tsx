@@ -77,10 +77,13 @@ export function Screen({
   children,
   scroll = true,
   header,
+  tone = "app",
   style,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
+  /** "page" = plain white surface for structured list/stepper layouts. */
+  tone?: "app" | "page";
   /** Rendered above the content, outside the padded column (e.g. AppHeader). */
   header?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -90,7 +93,7 @@ export function Screen({
   return (
     <SafeAreaView
       edges={header ? ["top", "bottom", "left", "right"] : ["bottom", "left", "right"]}
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      style={{ flex: 1, backgroundColor: tone === "page" ? theme.colors.page : theme.colors.background }}
     >
       {header}
       {scroll ? (
@@ -149,7 +152,8 @@ export function AppText({
 
 // ---------- Buttons ----------
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+// "ink" and "outline" are the restrained pair for structured layouts: no accent color on actions.
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "ink" | "outline";
 
 export function Button({
   label,
@@ -173,8 +177,17 @@ export function Button({
   const theme = useAppTheme();
   const c = theme.colors;
   const fg =
-    variant === "primary" ? c.onPrimary : variant === "danger" ? c.danger : variant === "ghost" ? c.primary : c.text;
-  const bg = variant === "primary" ? c.primary : variant === "secondary" ? c.surface : "transparent";
+    variant === "primary"
+      ? c.onPrimary
+      : variant === "ink"
+        ? c.onInk
+        : variant === "danger"
+          ? c.danger
+          : variant === "ghost"
+            ? c.primary
+            : c.text;
+  const bg =
+    variant === "primary" ? c.primary : variant === "ink" ? c.ink : variant === "secondary" ? c.surface : variant === "outline" ? c.page : "transparent";
   return (
     <Pressable
       accessibilityRole="button"
@@ -194,6 +207,7 @@ export function Button({
           transform: pressed && !theme.reduceMotion ? [{ scale: 0.985 }] : undefined,
         },
         variant === "secondary" && theme.elevation.card,
+        variant === "outline" && { borderWidth: theme.borderWidth, borderColor: c.borderStrong },
         variant === "primary" && !theme.highContrast && { boxShadow: "0px 1px 2px rgba(15, 110, 100, 0.25)" },
         style,
       ]}

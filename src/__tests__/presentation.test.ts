@@ -1,4 +1,4 @@
-import { boostedTier, presentCard, presentStep } from "../lib/presentation";
+import { boostedTier, nextUnfinished, presentCard, presentStep, stepStatuses } from "../lib/presentation";
 
 const step = { label: "Get your worksheet", hint: "It's in the blue folder", photoUri: "file:///p.jpg" };
 
@@ -66,5 +66,35 @@ describe("presentCard", () => {
 
   it("never offers an empty hint", () => {
     expect(presentCard("  ", 2)).toMatchObject({ hintShown: false, hintOffered: false });
+  });
+});
+
+describe("stepStatuses", () => {
+  const ids = ["a", "b", "c", "d"];
+
+  it("marks finished steps Done (even when help was needed) and ignores breaks", () => {
+    const logs = [
+      { stepId: "a", outcome: "need_help" as const },
+      { stepId: "b", outcome: "break" as const },
+    ];
+    expect(stepStatuses(ids, logs, 1, 0)).toEqual(["done", "in_progress", "not_started", "not_started"]);
+  });
+
+  it("shows Needs Help only on the current step after a help request", () => {
+    expect(stepStatuses(ids, [], 2, 1)).toEqual(["not_started", "not_started", "needs_help", "not_started"]);
+  });
+});
+
+describe("nextUnfinished", () => {
+  it("moves forward to the next unfinished step", () => {
+    expect(nextUnfinished(["done", "done", "not_started", "not_started"], 1)).toBe(2);
+  });
+
+  it("wraps around to steps skipped earlier", () => {
+    expect(nextUnfinished(["not_started", "done", "done", "done"], 3)).toBe(0);
+  });
+
+  it("returns null when every step is done", () => {
+    expect(nextUnfinished(["done", "done"], 1)).toBeNull();
   });
 });

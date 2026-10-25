@@ -46,6 +46,12 @@ export interface ThemeColors {
   onPrimary: string;
   primarySoft: string;
   chart: string;
+  // Structured (list/stepper) layouts: white page, ink actions, accent only for links/progress.
+  page: string;
+  ink: string;
+  onInk: string;
+  link: string;
+  divider: string;
   success: string;
   warning: string;
   onWarning: string;
@@ -65,6 +71,11 @@ const standard: ThemeColors = {
   onPrimary: neutral[0],
   primarySoft: brand[100],
   chart: brand[500],
+  page: neutral[0],
+  ink: "#1F2328",
+  onInk: neutral[0],
+  link: brand[600],
+  divider: "#E6E6E3",
   success: "#2F7D4F",
   warning: "#E9B949",
   onWarning: neutral[900],
@@ -85,6 +96,11 @@ const highContrast: ThemeColors = {
   onPrimary: "#000000",
   primarySoft: "#1F1F1F",
   chart: "#FFD600",
+  page: "#000000",
+  ink: "#FFD600",
+  onInk: "#000000",
+  link: "#FFD600",
+  divider: "#FFFFFF",
   success: "#5CFF8F",
   warning: "#FFD600",
   onWarning: "#000000",

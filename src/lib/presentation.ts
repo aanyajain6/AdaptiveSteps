@@ -6,7 +6,7 @@
 //  - preferred format (UDL): HOW it's shown, set by the parent.
 // Pure, so the tier rules are unit-tested rather than buried in UI.
 
-import { PreferredFormat, SessionStep, SupportTier } from "../types/models";
+import { PreferredFormat, SessionStep, StepOutcome, SupportTier } from "../types/models";
 
 export interface StepPresentation {
   showHint: boolean;
@@ -74,4 +74,44 @@ export function presentCard(back: string, tier: SupportTier): CardPresentation {
     answerShownWithPrompt: tier === 3,
     hint,
   };
+}
+
+// ---------- Step status (stepper + status rows) ----------
+
+/** Progress within the current run. Support level is a separate axis, never mixed in here. */
+export type StepStatus = "not_started" | "in_progress" | "needs_help" | "done";
+
+export const STEP_STATUS_LABELS: Record<StepStatus, string> = {
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  needs_help: "Needs Help",
+  done: "Done",
+};
+
+/**
+ * Status of every step in this run. A step is Done once it has a
+ * finishing log (done or need_help) -- finishing with help is still
+ * Done. "Needs Help" only describes the step being worked on right now.
+ */
+export function stepStatuses(
+  stepIds: string[],
+  logs: { stepId: string; outcome: StepOutcome }[],
+  currentIndex: number,
+  currentHelpRequests: number
+): StepStatus[] {
+  const finished = new Set(logs.filter((l) => l.outcome !== "break").map((l) => l.stepId));
+  return stepIds.map((id, i) => {
+    if (finished.has(id)) return "done";
+    if (i === currentIndex) return currentHelpRequests > 0 ? "needs_help" : "in_progress";
+    return "not_started";
+  });
+}
+
+/** Where to go after finishing step `from`: the next unfinished step, wrapping around; null when all are done. */
+export function nextUnfinished(statuses: StepStatus[], from: number): number | null {
+  for (let k = 1; k <= statuses.length; k++) {
+    const i = (from + k) % statuses.length;
+    if (statuses[i] !== "done") return i;
+  }
+  return null;
 }

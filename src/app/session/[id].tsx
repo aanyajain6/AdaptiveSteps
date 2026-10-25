@@ -1,12 +1,15 @@
 // ============================================================
 // Study Session Runner (Child Mode) -- the core experience
 // ============================================================
-// One step at a time, read aloud. Deliberate choices:
-//  - Progress is "step 2 of 5", never a countdown: timers create
-//    pressure, and pressure is what we're trying to remove.
+// A numbered vertical stepper: every step visible as a sequence, the
+// current one expanded with its support, read aloud. Deliberate choices:
+//  - Progress is "step 2 of 5" and a fill bar, never a countdown:
+//    timers create pressure, and pressure is what we're removing.
 //  - "Need help" and "Take a break" are always available and never
 //    recorded as failure. Help raises support on the spot; a break
 //    pauses the clock and is ignored by the adaptive engine.
+//  - Any step can be opened by tapping its number. Finishing a step
+//    moves to the next unfinished one; the session ends when all are done.
 //  - Support tiers only change *between* runs, so the screen never
 //    shifts under a child mid-session.
 
@@ -14,7 +17,9 @@ import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import type { LucideIcon } from "lucide-react-native";
 import {
+  ArrowRight,
   Check,
+  ClipboardList,
   Clock,
   Coffee,
   Hand,
@@ -27,13 +32,14 @@ import {
   Volume2,
 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { Celebration, CELEBRATION_MS } from "../../components/Celebration";
 import { MoodCheckIn } from "../../components/MoodCheckIn";
-import { AppText, Button, Card, Icon, Screen } from "../../components/ui";
+import { Dropdown, PageHeader, Stepper, StepperItem } from "../../components/structure";
+import { AppText, Button, Icon, Screen } from "../../components/ui";
 import { adaptStep } from "../../lib/adaptation";
 import * as db from "../../lib/db";
-import { boostedTier, presentStep } from "../../lib/presentation";
+import { boostedTier, nextUnfinished, presentStep, stepStatuses } from "../../lib/presentation";
 import { speak, stopSpeaking } from "../../lib/speech";
 import { nowIso, nowMs } from "../../lib/time";
 import { useApp, useAppTheme } from "../../state/AppProvider";
@@ -42,6 +48,10 @@ import { ChoiceResponse, Mood, SessionAttempt, StudySession } from "../../types/
 
 type Phase = "loading" | "missing" | "moodBefore" | "step" | "celebrate" | "break" | "moodAfter" | "finished";
 type StepLog = SessionAttempt["stepLogs"][number];
+type ViewMode = "all" | "current";
+
+/** Side-by-side stepper and step detail from this width up (tablets, web). */
+const WIDE_BREAKPOINT = 820;
 
 const CHOICES: { value: ChoiceResponse; icon: LucideIcon; label: string; reply?: string }[] = [
   { value: "yes", icon: ThumbsUp, label: "Yes", reply: "Okay!" },
@@ -54,6 +64,8 @@ export default function SessionRunner() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { activeChild, theme } = useApp();
   const c = theme.colors;
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
 
   const [session, setSession] = useState<StudySession | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -61,6 +73,8 @@ export default function SessionRunner() {
   const [helpRequests, setHelpRequests] = useState(0);
   const [choices, setChoices] = useState<ChoiceResponse[]>([]);
   const [ack, setAck] = useState("");
+  const [logs, setLogs] = useState<StepLog[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
 
   // The attempt is saved after every step, so stopping halfway still
   // leaves an accurate record.
@@ -81,6 +95,7 @@ export default function SessionRunner() {
   const step = session?.steps[index];
   const tier = step ? boostedTier(step.supportTier, helpRequests) : 0;
   const view = step && activeChild ? presentStep(step, tier, activeChild.preferredFormat) : null;
+  const statuses = session ? stepStatuses(session.steps.map((s) => s.id), logs, index, helpRequests) : [];
 
   // Read the step aloud on arrival, after a break, and again after each help request.
   const narrationText = view && phase === "step" ? view.narration.join("\n") : "";
@@ -105,6 +120,7 @@ export default function SessionRunner() {
       ...patch,
       stepLogs: log ? [...attempt.current.stepLogs, log] : attempt.current.stepLogs,
     };
+    setLogs(attempt.current.stepLogs);
     await db.saveSessionAttempt(attempt.current);
   }
 
@@ -134,22 +150,38 @@ export default function SessionRunner() {
     beginStep(0);
   }
 
+  function goToNextOrFinish(after: StepLog[]) {
+    const next = nextUnfinished(stepStatuses(session!.steps.map((s) => s.id), after, -1, 0), index);
+    if (next === null) setPhase("moodAfter");
+    else beginStep(next);
+  }
+
   async function done() {
     if (!session || !step || finishingStep.current) return;
-    finishingStep.current = true;
     stopSpeaking();
+    // Re-opened a step that's already finished this run: just move on, never log it twice.
+    if (statuses[index] === "done") return goToNextOrFinish(logs);
+
+    finishingStep.current = true;
     // Needing help along the way is information for the engine, not a mark against the child.
     const log = makeLog(helpRequests > 0 ? "need_help" : "done");
     await saveAttempt({}, log);
     await adaptStep(session.id, step.id, log.timestamp);
 
-    const isLast = index === session.steps.length - 1;
+    const after = [...logs, log];
     setPhase("celebrate");
     setTimeout(() => {
       finishingStep.current = false;
-      if (isLast) setPhase("moodAfter");
-      else beginStep(index + 1);
+      goToNextOrFinish(after);
     }, CELEBRATION_MS);
+  }
+
+  function jumpTo(key: string) {
+    if (!session || phase !== "step") return;
+    const i = session.steps.findIndex((s) => s.id === key);
+    if (i < 0 || i === index) return;
+    stopSpeaking();
+    beginStep(i);
   }
 
   function needHelp() {
@@ -185,22 +217,23 @@ export default function SessionRunner() {
   }
 
   const title = session?.title ?? "Study session";
+  const headerOptions = { title: "", headerStyle: { backgroundColor: c.page } };
 
-  if (phase === "loading") return <Screen>{null}</Screen>;
+  if (phase === "loading") return <Screen tone="page">{null}</Screen>;
 
   if (phase === "missing") {
     return (
-      <Screen>
+      <Screen tone="page">
         <AppText>{"This session isn't available anymore."}</AppText>
-        <Button label="Go back" onPress={() => router.back()} />
+        <Button label="Go back" variant="ink" onPress={() => router.back()} />
       </Screen>
     );
   }
 
   if (phase === "moodBefore" || phase === "moodAfter") {
     return (
-      <Screen style={{ justifyContent: "center" }}>
-        <Stack.Screen options={{ title }} />
+      <Screen tone="page" style={{ justifyContent: "center" }}>
+        <Stack.Screen options={headerOptions} />
         <MoodCheckIn
           prompt={phase === "moodBefore" ? "How are you feeling?" : "How do you feel now?"}
           subtitle={phase === "moodBefore" ? "Pick the face that fits. Any answer is okay." : "You finished every step."}
@@ -212,181 +245,240 @@ export default function SessionRunner() {
 
   if (phase === "finished") {
     return (
-      <Screen style={{ justifyContent: "center" }}>
-        <Stack.Screen options={{ title }} />
+      <Screen tone="page" style={{ justifyContent: "center" }}>
+        <Stack.Screen options={headerOptions} />
         <Moment icon={PartyPopper} title="All done!" body={`You finished ${title}.`} />
-        <Button label="Back home" icon={House} size="lg" onPress={() => router.dismissTo("/")} />
+        <Button label="Back home" icon={House} variant="ink" size="lg" onPress={() => router.dismissTo("/")} />
       </Screen>
     );
   }
 
   if (phase === "break") {
     return (
-      <Screen style={{ justifyContent: "center" }}>
-        <Stack.Screen options={{ title }} />
-        <Moment
-          icon={Coffee}
-          title="Break time"
-          body="Take your time. Stretch, get some water, or take a few slow breaths."
-          tone="neutral"
-        />
-        <Button label="I'm ready" icon={Play} size="lg" onPress={endBreak} />
+      <Screen tone="page" style={{ justifyContent: "center" }}>
+        <Stack.Screen options={headerOptions} />
+        <Moment icon={Coffee} title="Break time" body="Take your time. Stretch, get some water, or take a few slow breaths." />
+        <Button label="I'm ready" icon={Play} variant="ink" size="lg" onPress={endBreak} />
       </Screen>
     );
   }
 
   if (!session || !step || !view) return null;
+
   const total = session.steps.length;
+  const doneCount = statuses.filter((s) => s === "done").length;
+  const items: StepperItem[] = session.steps.map((s, i) => ({
+    key: s.id,
+    number: i + 1,
+    title: s.label,
+    meta: s.subjectTag || undefined,
+    status: statuses[i],
+  }));
+  const visibleItems = viewMode === "current" ? items.filter((it) => it.key === step.id) : items;
+
+  const detail = (
+    <StepDetail
+      celebrating={phase === "celebrate"}
+      showHint={view.showHint}
+      hint={step.hint}
+      photo={view.photo}
+      photoUri={step.photoUri}
+      label={step.label}
+      ack={ack}
+      alreadyDone={statuses[index] === "done"}
+      onHear={() => speak(view.narration)}
+      onDone={done}
+      onHelp={needHelp}
+      onBreak={takeBreak}
+      onChoose={choose}
+    />
+  );
+
+  const header = (
+    <View style={{ gap: space.md }}>
+      <PageHeader
+        icon={ClipboardList}
+        title={title}
+        meta={[session.subject, `Step ${index + 1} of ${total}`, `${doneCount} done`].filter(Boolean).join(" · ")}
+        right={
+          <Dropdown<ViewMode>
+            label="Viewing by"
+            value={viewMode}
+            options={[
+              { value: "all", label: "All steps" },
+              { value: "current", label: "Current step" },
+            ]}
+            onChange={setViewMode}
+          />
+        }
+      />
+      {/* Progress fill: steps finished, not time. */}
+      <View
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={`${doneCount} of ${total} steps done`}
+        style={{ height: 4, borderRadius: radius.pill, backgroundColor: c.divider }}
+      >
+        <View style={{ width: `${(doneCount / total) * 100}%`, height: 4, borderRadius: radius.pill, backgroundColor: c.link }} />
+      </View>
+    </View>
+  );
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title }} />
-
-      {/* Progress strip -- position only, no clock. */}
-      <View accessible accessibilityLabel={`Step ${index + 1} of ${total}`} style={{ gap: space.sm }}>
-        <AppText variant="overline" muted>
-          Step {index + 1} of {total}
-        </AppText>
-        <View style={{ flexDirection: "row", gap: 6 }}>
-          {session.steps.map((s, i) => (
-            <View
-              key={s.id}
-              style={{
-                flex: 1,
-                height: 6,
-                borderRadius: radius.pill,
-                backgroundColor:
-                  i < index || (i === index && phase === "celebrate")
-                    ? c.success
-                    : i === index
-                      ? c.primary
-                      : c.borderStrong,
-              }}
-            />
-          ))}
-        </View>
-      </View>
-
-      {phase === "celebrate" ? (
-        <Celebration />
-      ) : (
-        <>
-          <Card raised style={{ gap: space.lg, padding: space.xl }}>
+    <Screen tone="page" style={wide ? { maxWidth: 1040 } : undefined}>
+      <Stack.Screen options={headerOptions} />
+      {header}
+      {wide ? (
+        <View style={{ flexDirection: "row", gap: space.xxl, alignItems: "flex-start" }}>
+          <View style={{ width: 360 }}>
+            <Stepper items={visibleItems} currentKey={step.id} onSelect={jumpTo} />
+          </View>
+          <View style={{ flex: 1, gap: space.lg, paddingTop: space.sm }}>
             <AppText variant="display">{step.label}</AppText>
-            {view.showHint && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: space.md,
-                  backgroundColor: c.primarySoft,
-                  borderRadius: radius.md,
-                  padding: space.md,
-                }}
-              >
-                <Icon icon={Lightbulb} size={20} color={c.primary} />
-                <AppText style={{ flex: 1 }}>{step.hint}</AppText>
-              </View>
-            )}
-            {view.photo !== "none" && step.photoUri && (
-              <Image
-                source={{ uri: step.photoUri }}
-                accessibilityLabel={`Picture for: ${step.label}`}
-                contentFit="contain"
-                style={{
-                  width: view.photo === "large" ? "100%" : "50%",
-                  aspectRatio: 4 / 3,
-                  borderRadius: radius.md,
-                  alignSelf: "center",
-                }}
-              />
-            )}
-            <Button
-              label="Hear it again"
-              icon={Volume2}
-              variant="ghost"
-              onPress={() => speak(view.narration)}
-              style={{ alignSelf: "flex-start", paddingHorizontal: 0 }}
-            />
-          </Card>
-
-          {ack ? (
-            <AppText accessibilityLiveRegion="polite" muted style={{ textAlign: "center" }}>
-              {ack}
-            </AppText>
-          ) : null}
-
-          <View style={{ gap: space.md }}>
-            <Button label="Done" icon={Check} size="lg" onPress={done} />
-            <View style={{ flexDirection: "row", gap: space.md }}>
-              <Button label="I need help" icon={Hand} variant="secondary" onPress={needHelp} style={{ flex: 1 }} />
-              <Button label="Take a break" icon={Coffee} variant="secondary" onPress={takeBreak} style={{ flex: 1 }} />
-            </View>
+            {detail}
           </View>
-
-          {/* Choice board for kids who'd rather point than talk. */}
-          <View style={{ gap: space.sm }}>
-            <AppText variant="overline" muted style={{ paddingHorizontal: space.xs }}>
-              Or point to answer
-            </AppText>
-            <View style={{ flexDirection: "row", gap: space.sm }}>
-              {CHOICES.map((ch) => (
-                <Pressable
-                  key={ch.value}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Choice: ${ch.label}`}
-                  onPress={() => choose(ch)}
-                  style={({ pressed }) => [
-                    {
-                      flex: 1,
-                      minHeight: 72,
-                      gap: space.xs,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: radius.md,
-                      backgroundColor: pressed ? c.surfaceSunken : c.surface,
-                    },
-                    theme.elevation.card,
-                  ]}
-                >
-                  <Icon icon={ch.icon} size={22} color={c.primary} />
-                  <AppText variant="caption">{ch.label}</AppText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </>
+        </View>
+      ) : (
+        <Stepper items={visibleItems} currentKey={step.id} onSelect={jumpTo} renderExpanded={() => detail} />
       )}
     </Screen>
   );
 }
 
-/** Full-screen moment (break, finished): big icon, title, one line. */
-function Moment({
-  icon,
-  title,
-  body,
-  tone = "brand",
+/** The active step's support and actions. Accent color is kept off the buttons on purpose. */
+function StepDetail({
+  celebrating,
+  showHint,
+  hint,
+  photo,
+  photoUri,
+  label,
+  ack,
+  alreadyDone,
+  onHear,
+  onDone,
+  onHelp,
+  onBreak,
+  onChoose,
 }: {
-  icon: LucideIcon;
-  title: string;
-  body: string;
-  tone?: "brand" | "neutral";
+  celebrating: boolean;
+  showHint: boolean;
+  hint?: string;
+  photo: "none" | "small" | "large";
+  photoUri?: string;
+  label: string;
+  ack: string;
+  alreadyDone: boolean;
+  onHear: () => void;
+  onDone: () => void;
+  onHelp: () => void;
+  onBreak: () => void;
+  onChoose: (choice: (typeof CHOICES)[number]) => void;
 }) {
+  const theme = useAppTheme();
+  const c = theme.colors;
+
+  if (celebrating) return <Celebration />;
+
+  return (
+    <View style={{ gap: space.lg }}>
+      {showHint && hint ? (
+        <View style={{ flexDirection: "row", gap: space.md, padding: space.md, borderRadius: radius.sm, backgroundColor: c.surfaceSunken }}>
+          <Icon icon={Lightbulb} size={18} color={c.textMuted} />
+          <AppText style={{ flex: 1 }}>{hint}</AppText>
+        </View>
+      ) : null}
+      {photo !== "none" && photoUri ? (
+        <Image
+          source={{ uri: photoUri }}
+          accessibilityLabel={`Picture for: ${label}`}
+          contentFit="contain"
+          style={{
+            width: photo === "large" ? "100%" : "50%",
+            aspectRatio: 4 / 3,
+            borderRadius: radius.sm,
+            alignSelf: "flex-start",
+          }}
+        />
+      ) : null}
+      <Pressable accessibilityRole="button" accessibilityLabel="Hear it again" onPress={onHear} style={{ flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 32, alignSelf: "flex-start" }}>
+        <Icon icon={Volume2} size={18} color={c.link} />
+        <AppText variant="label" style={{ color: c.link }}>
+          Hear it again
+        </AppText>
+      </Pressable>
+
+      {ack ? (
+        <AppText accessibilityLiveRegion="polite" muted>
+          {ack}
+        </AppText>
+      ) : null}
+
+      <View style={{ gap: space.sm }}>
+        <Button
+          label={alreadyDone ? "Next step" : "Done"}
+          icon={alreadyDone ? ArrowRight : Check}
+          variant="ink"
+          size="lg"
+          onPress={onDone}
+        />
+        <View style={{ flexDirection: "row", gap: space.sm }}>
+          <Button label="I need help" icon={Hand} variant="outline" onPress={onHelp} style={{ flex: 1 }} />
+          <Button label="Take a break" icon={Coffee} variant="outline" onPress={onBreak} style={{ flex: 1 }} />
+        </View>
+      </View>
+
+      {/* Choice board for kids who'd rather point than talk. */}
+      <View style={{ gap: space.sm }}>
+        <AppText variant="overline" muted>
+          Or point to answer
+        </AppText>
+        <View style={{ flexDirection: "row", gap: space.sm }}>
+          {CHOICES.map((ch) => (
+            <Pressable
+              key={ch.value}
+              accessibilityRole="button"
+              accessibilityLabel={`Choice: ${ch.label}`}
+              onPress={() => onChoose(ch)}
+              style={({ pressed }) => ({
+                flex: 1,
+                minHeight: 64,
+                gap: space.xs,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: radius.sm,
+                borderWidth: theme.borderWidth,
+                borderColor: c.borderStrong,
+                backgroundColor: pressed ? c.surfaceSunken : c.page,
+              })}
+            >
+              <Icon icon={ch.icon} size={20} color={c.text} />
+              <AppText variant="caption">{ch.label}</AppText>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** Full-screen moment (break, finished): neutral icon, title, one line. */
+function Moment({ icon, title, body }: { icon: LucideIcon; title: string; body: string }) {
   const theme = useAppTheme();
   const c = theme.colors;
   return (
     <View style={{ alignItems: "center", gap: space.lg, paddingVertical: space.xl }}>
       <View
         style={{
-          width: 96,
-          height: 96,
-          borderRadius: 48,
+          width: 88,
+          height: 88,
+          borderRadius: 44,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: tone === "brand" ? c.primary : c.primarySoft,
+          backgroundColor: c.surfaceSunken,
         }}
       >
-        <Icon icon={icon} size={44} color={tone === "brand" ? c.onPrimary : c.primary} />
+        <Icon icon={icon} size={40} color={c.text} />
       </View>
       <View style={{ alignItems: "center", gap: space.sm }}>
         <AppText variant="display" style={{ textAlign: "center" }}>
