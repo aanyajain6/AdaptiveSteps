@@ -215,5 +215,5 @@ export async function setActiveChildId(childId: string | null): Promise<void> {
 
 // ---------- Dev helper ----------
 export async function wipeAllData(): Promise<void> {
-  await AsyncStorage.removeMany(Object.values(KEYS));
+  await AsyncStorage.multiRemove(Object.values(KEYS));
 }

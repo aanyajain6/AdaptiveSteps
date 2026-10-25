@@ -16,7 +16,6 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules",
-    "Claude outputs"
+    "node_modules"
   ]
 }
